@@ -7,7 +7,7 @@ export default function  Explore () {
 
    return (
          <View  style={styles.container}>
-          <Text> hi  </Text>
+          <Text> hi pag explore </Text>
           
           </View>
        )
