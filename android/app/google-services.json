@@ -1,0 +1,29 @@
+{
+    "project_info": {
+      "project_number": "251500016930",
+      "project_id": "cooking-22cf4",
+      "storage_bucket": "cooking-22cf4.firebasestorage.app"
+    },
+    "client": [
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:251500016930:android:e4f918968d3b910de2a17b",
+          "android_client_info": {
+            "package_name": "com.cooking"
+          }
+        },
+        "oauth_client": [],
+        "api_key": [
+          {
+            "current_key": "AIzaSyCYbbYLpc5NIonMJfownRcLCuEKj8ufYIY"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": []
+          }
+        }
+      }
+    ],
+    "configuration_version": "1"
+  }
