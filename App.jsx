@@ -9,7 +9,9 @@ import Home from "./components/Main/Home";
 import Icon from 'react-native-vector-icons/Ionicons';
 import Add from "./components/Main/Add";
 import Explore from "./components/Main/Explore";
-
+import Chat from "./components/Chat/Chat";
+import ChatListe from "./components/Chat/ChatListe";
+import AddToChat from "./components/Chat/AddToChat";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -96,6 +98,9 @@ export default function App() {
         <Stack.Screen name="Home" component={TabNav} options={{ headerShown: false }} />
         <Stack.Screen name="Add" component={Add} options={{ headerShown: false }} />
         <Stack.Screen name="Explore" component={Explore} options={{ headerShown: false }} />
+        <Stack.Screen name="Chat" component={Chat} options={{ headerShown: false }} />
+        <Stack.Screen name="ChatListe" component={ChatListe} options={{ headerShown: false }} />
+        <Stack.Screen name="AddToChat" component={AddToChat} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

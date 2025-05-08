@@ -1,6 +1,6 @@
 import React, { Component ,useState} from 'react'
 import { StyleSheet ,Text,View,TextInput,TouchableOpacity,ScrollView } from 'react-native'
-
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function  Add (){
   const [title, setTitle] = useState('');
@@ -12,14 +12,27 @@ export default function  Add (){
         <ScrollView>
         <Text  style={styles.title} >أضف وصفة جديدة</Text>
       <View style={styles.from}>
+       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
         <Text style={styles.label}>عنوان</Text>
+        <TouchableOpacity style={{backgroundColor:"#FBD38D" ,borderRadius: 20, padding: 4,  width: 50,
+             height: 50}}>
+        <Icon name="mic-outline" size={43} color="#999" />
+        </TouchableOpacity>
+        </View>
         <TextInput
           style={styles.input}
           value={title}
           onChangeText={setTitle}
           placeholder="أدخل عنوانًا"
         />
+
+         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
         <Text style={styles.label}>وصف</Text>
+        <TouchableOpacity style={{backgroundColor:"#FBD38D" ,borderRadius: 20, padding: 4,  width: 50,
+  height: 50}}>
+        <Icon name="mic-outline" size={43} color="#999" />
+        </TouchableOpacity>
+        </View>
         <TextInput
           style={[styles.input ,styles.textArea]}
           value={description}
@@ -61,6 +74,7 @@ const styles=StyleSheet.create({
     fontSize: 16,
     marginBottom: 5,
     fontWeight: '500',
+    
   },
   input: {
     backgroundColor: '#fff',
