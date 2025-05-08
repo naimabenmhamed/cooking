@@ -6,7 +6,7 @@ const uploadAudio = async (audioPath) => {
   
     formData.append('file', {
       uri: Platform.OS === 'android' ? 'file://' + audioPath : audioPath,
-      type: 'audio/mp3', // ou 'audio/m4a' selon ton format
+      type: 'audio/m4a', // ou 'audio/m4a' selon ton format
       name: 'enregistrement.mp3',
     });
   
