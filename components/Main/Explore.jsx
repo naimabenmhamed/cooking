@@ -1,12 +1,12 @@
 
-import React, { Component } from 'react'
-import {  SafeAreaView,View ,StyleSheet,Text ,TouchableOpacity,ScrollView} from 'react-native' 
+import React, { Component ,useState} from 'react'
+import {  SafeAreaView,View ,StyleSheet,Text ,TouchableOpacity,ScrollView ,Button} from 'react-native' 
 import {createBottomTabNavigator} from "@react-navigation/bottom-tabs";
 import Icon from 'react-native-vector-icons/Ionicons';
 import Chat from '../Chat/Chat';
-
+import Recorde from './Recorde';
 export default function  Explore ({navigation}) {
-
+  const [activeTab, setActiveTab] = useState(0);
 
    return (
          < SafeAreaView style={styles.container}>
@@ -16,20 +16,41 @@ export default function  Explore ({navigation}) {
           <Icon name="person" size={43} color="#999" />
           </Text>
         </TouchableOpacity>
-      <View style={styles.middlePart}>
-        {/* <ScrollView 
-      horizontal={true} 
-      showsHorizontalScrollIndicator={false}
-      style={styles.scrollView}
-    >
-     {[1,2,3,4,5].map((item) => (
-              <View key={item} style={[styles.item, { backgroundColor: ['red','green','blue','yellow','gray'][item-1] }]}>
-                <Text>Item {item}</Text>
-              </View>
-            ))}
-    
-    </ScrollView> */}
-      </View>
+      {/* <View style={styles.middlePart}>
+        
+      </View> */}
+     <View style={styles.tabBarContainer}>
+      <TouchableOpacity style={[styles.tabItem , activeTab === 0 && styles.activeTab]} onPress={()=>setActiveTab(0)} >
+        <Icon name="grid" size={24} color={activeTab === 0 ? "#FBD38D" : "#7f8c8d"} />
+      </TouchableOpacity>
+      
+          
+          <TouchableOpacity 
+            style={[styles.tabItem, activeTab === 1 && styles.activeTab]} 
+            onPress={() => setActiveTab(1)}
+          >
+            <Icon name="person" size={24} color={activeTab === 1 ? "#FBD38D" : "#7f8c8d"} />
+          </TouchableOpacity>
+     </View>
+
+
+         <View style={styles.middlePart}>
+          {/* Le contenu changera en fonction de l'onglet actif */}
+          {activeTab === 0 && (
+            <Text>Contenu de la grille</Text>
+
+          )}
+          
+          {activeTab === 1 && (
+            <Text>Contenu du profil</Text>
+          )}
+       
+        </View>
+
+
+
+
+
         </View>
          
           <TouchableOpacity  style={styles.chatButton}  onPress={() => navigation.navigate('Chat')}>
@@ -37,7 +58,7 @@ export default function  Explore ({navigation}) {
             <Icon name="chatbox" size={30} style={styles.buttonIcon} />
             </Text>
           </TouchableOpacity>
-          
+          <Button title='hi' onPress={()=> navigation.navigate('Recorde')} />
           </ SafeAreaView>
           
        )
@@ -149,9 +170,29 @@ item: {
   alignItems: 'center',
   borderRadius: 8,
 },
-   
+  tabBarContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#999',
+    height: 50,
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2c2c2c',
+    marginTop: -267,
+  },
 
-     
+    tabItem: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 1,
+  },
+activeTab: {
+    borderBottomWidth: 2,
+    borderBottomColor: '#FBD38D',
+  },
+     middlePart:{
+
+     },
     
    })
 

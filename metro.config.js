@@ -1,11 +1,22 @@
 const {getDefaultConfig, mergeConfig} = require('@react-native/metro-config');
+const path = require('path');
 
-/**
- * Metro configuration
- * https://reactnative.dev/docs/metro
- *
- * @type {import('@react-native/metro-config').MetroConfig}
- */
-const config = {};
+// Configuration de base
+const defaultConfig = getDefaultConfig(__dirname);
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+// Configuration personnalisée
+const customConfig = {
+  resolver: {
+    extraNodeModules: {
+      // Redirige les imports du module problématique
+      'react-native-audio-recorder-player': path.resolve(
+        __dirname,
+        'node_modules/react-native-audio-recorder-player',
+      ),
+    },
+    // Forcer Metro à chercher les fichiers .js en priorité
+    sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx'],
+  },
+};
+
+module.exports = mergeConfig(defaultConfig, customConfig);

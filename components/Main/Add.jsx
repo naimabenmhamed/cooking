@@ -1,6 +1,8 @@
 import React, { Component ,useState} from 'react'
 import { StyleSheet ,Text,View,TextInput,TouchableOpacity,ScrollView } from 'react-native'
 import Icon from 'react-native-vector-icons/Ionicons';
+import firestore from '@react-native-firebase/firestore';
+import auth from '@react-native-firebase/auth';
 
 export default function  Add (){
   const [title, setTitle] = useState('');

@@ -1,26 +1,29 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
-// Fonction pour envoyer le fichier audio
+
+// Function to send the audio file for transcription
 const uploadAudio = async (audioPath) => {
-    const formData = new FormData();
+  const formData = new FormData();
   
-    formData.append('file', {
-      uri: Platform.OS === 'android' ? 'file://' + audioPath : audioPath,
-      type: 'audio/mp3', // ou 'audio/m4a' selon ton format
-      name: 'enregistrement.mp3',
+  formData.append('file', {
+    uri: Platform.OS === 'android' ? 'file://' + audioPath : audioPath,
+    type: 'audio/m4a', // or 'audio/mp3' depending on your format
+    name: 'recording.m4a',
+  });
+
+  try {
+    const response = await axios.post('http://192.168.0.137:8000', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
     });
-  
-    try {
-      const response = await axios.post('http://127.0.0.1:8000', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-  
-      console.log('Texte transcrit :', response.data.texte);
-      return response.data.texte;
-    } catch (error) {
-      console.error('Erreur d\'envoi :', error.message);
-      return null;
-    }
-  };
+
+    console.log('Transcribed text:', response.data.transcription);
+    return response.data.transcription;
+  } catch (error) {
+    console.error('Upload error:', error.message);
+    return null;
+  }
+};
+
+export { uploadAudio };

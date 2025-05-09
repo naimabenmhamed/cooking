@@ -12,6 +12,7 @@ import Explore from "./components/Main/Explore";
 import Chat from "./components/Chat/Chat";
 import ChatListe from "./components/Chat/ChatListe";
 import AddToChat from "./components/Chat/AddToChat";
+import Recorde from "./components/Main/Recorde";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -101,6 +102,7 @@ export default function App() {
         <Stack.Screen name="Chat" component={Chat} options={{ headerShown: false }} />
         <Stack.Screen name="ChatListe" component={ChatListe} options={{ headerShown: false }} />
         <Stack.Screen name="AddToChat" component={AddToChat} options={{ headerShown: false }} />
+         <Stack.Screen name="Recorde" component={Recorde} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
