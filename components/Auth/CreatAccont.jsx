@@ -4,10 +4,12 @@ import { SafeAreaView, View, StyleSheet, TextInput, TouchableOpacity, Text,Alert
 import Login from './Login';
 import auth from '@react-native-firebase/auth';
 import Home from '../Main/Home';
+import firestore from '@react-native-firebase/firestore';
 
 export default function CreatAccount({navigation}) {
   const[email,setEmail]= useState('');
   const[password,setPassword]= useState('');
+const [nom, setNom] = useState('');
 
   const handleSignup = async () => {
     if (password.length < 6) {
@@ -15,12 +17,26 @@ export default function CreatAccount({navigation}) {
       return;
     }
     try {
-      await auth().createUserWithEmailAndPassword(email, password);
-      Alert.alert('Succès', 'Compte créé avec succès');
-      navigation.navigate('Home');
-    } catch (error) {
-      Alert.alert('Erreur', error.message);
-    }
+  const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+  Alert.alert('Succès', 'Compte créé avec succès');
+  navigation.navigate('Home');
+
+  const userId = userCredential.user.uid;
+
+  await firestore()
+    .collection('users')
+    .doc(userId)
+    .set({
+      nom: nom, // attention : "nom" n'est pas défini non plus dans ton code actuel !
+      email: email,
+      createdAt: firestore.FieldValue.serverTimestamp()
+    });
+
+  console.log('✅ Utilisateur enregistré avec succès !');
+} catch (error) {
+  Alert.alert('Erreur', error.message);
+}
+
   };
 
   return (
@@ -38,6 +54,14 @@ export default function CreatAccount({navigation}) {
       
       {/* Zone orange inférieure */}
       <View style={styles.bottomSection}>
+        <TextInput
+  placeholder="الاسم"
+  placeholderTextColor="#999"
+  style={styles.input}
+  value={nom}
+  onChangeText={setNom}
+/>
+
         <TextInput
           placeholder="البريد الإلكتروني"
           placeholderTextColor="#999"

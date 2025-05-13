@@ -5,7 +5,7 @@ export default function Home({ navigation }) {
   const handleLogout = async () => {
     try {
       await auth().signOut();
-      navigation.navigate('Login');  // Navigation vers l'écran de connexion
+      navigation.navigate('CreatAccont');  // Navigation vers l'écran de connexion
     } catch (error) {
       Alert.alert('Erreur', error.message);
     }

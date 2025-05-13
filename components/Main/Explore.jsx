@@ -1,199 +1,181 @@
-
-import React, { Component ,useState} from 'react'
-import {  SafeAreaView,View ,StyleSheet,Text ,TouchableOpacity,ScrollView ,Button} from 'react-native' 
-import {createBottomTabNavigator} from "@react-navigation/bottom-tabs";
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import Chat from '../Chat/Chat';
-import Recorde from './Recorde';
-export default function  Explore ({navigation}) {
+import auth from '@react-native-firebase/auth';
+import firestore from '@react-native-firebase/firestore';
+import Notes from './Notes';
+import Toast from 'react-native-toast-message';
+import ModifierNomComponent from './ModifierN';
+
+export default function Explore({ navigation }) {
   const [activeTab, setActiveTab] = useState(0);
+  const [nom, setNom] = useState('');
+  const [showDialog, setShowDialog] = useState(false);
+  const userId = auth().currentUser.uid;
 
-   return (
-         < SafeAreaView style={styles.container}>
-        <View style={styles.topSection}>
-        <TouchableOpacity style={styles.chatButton1}>
-          <Text style={styles.chatText}>
-          <Icon name="person" size={43} color="#999" />
-          </Text>
+  useEffect(() => {
+    const unsubscribe = firestore()
+      .collection('users')
+      .doc(userId)
+      .onSnapshot(documentSnapshot => {
+        if (documentSnapshot.exists) {
+          const userData = documentSnapshot.data();
+          setNom(userData.nom);
+        }
+      });
+
+    return () => unsubscribe();
+  }, []);
+
+  const ouvrirModifNom = () => {
+    setShowDialog(true);
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Section supérieure avec photo et nom */}
+      <View style={styles.profileHeader}>
+        <View style={styles.profileIconContainer}>
+          <Icon name="person" size={50} color="#999" />
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={styles.userName}>{nom}</Text>
+          <TouchableOpacity onPress={ouvrirModifNom} style={styles.buttonStyle}>
+            <Icon name="id-card-outline" size={30} color="#999" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Tab bar */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 0 && styles.activeTab]}
+          onPress={() => setActiveTab(0)}
+        >
+          <Icon name="grid" size={24} color={activeTab === 0 ? "#FBD38D" : "#7f8c8d"} />
+          <Text style={styles.tabLabel}>Home</Text>
         </TouchableOpacity>
-      {/* <View style={styles.middlePart}>
-        
-      </View> */}
-     <View style={styles.tabBarContainer}>
-      <TouchableOpacity style={[styles.tabItem , activeTab === 0 && styles.activeTab]} onPress={()=>setActiveTab(0)} >
-        <Icon name="grid" size={24} color={activeTab === 0 ? "#FBD38D" : "#7f8c8d"} />
+
+        <TouchableOpacity
+          style={[styles.tabButton, activeTab === 1 && styles.activeTab]}
+          onPress={() => setActiveTab(1)}
+        >
+          <Icon name="person" size={24} color={activeTab === 1 ? "#FBD38D" : "#7f8c8d"} />
+          <Text style={styles.tabLabel}>Profil</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Contenu principal */}
+      <View style={styles.content}>
+        {activeTab === 0 && <Notes />}
+        {activeTab === 1 && (
+          <View style={styles.profileContent}>
+            <Text style={styles.sectionTitle}>Informations personnelles</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Bouton de chat */}
+      <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chat')}>
+        <Icon name="chatbox" size={30} color="#999" />
       </TouchableOpacity>
-      
-          
-          <TouchableOpacity 
-            style={[styles.tabItem, activeTab === 1 && styles.activeTab]} 
-            onPress={() => setActiveTab(1)}
-          >
-            <Icon name="person" size={24} color={activeTab === 1 ? "#FBD38D" : "#7f8c8d"} />
-          </TouchableOpacity>
-     </View>
 
+      // Le composant de dialogue
+{showDialog && (
+  <ModifierNomComponent 
+    userId={userId} 
+    visible={showDialog} 
+    onClose={() => setShowDialog(false)} 
+  />
+)}
+      <Toast />
+    </SafeAreaView>
+  );
+}
 
-         <View style={styles.middlePart}>
-          {/* Le contenu changera en fonction de l'onglet actif */}
-          {activeTab === 0 && (
-            <Text>Contenu de la grille</Text>
-
-          )}
-          
-          {activeTab === 1 && (
-            <Text>Contenu du profil</Text>
-          )}
-       
-        </View>
-
-
-
-
-
-        </View>
-         
-          <TouchableOpacity  style={styles.chatButton}  onPress={() => navigation.navigate('Chat')}>
-            <Text   style={styles.chatText}>
-            <Icon name="chatbox" size={30} style={styles.buttonIcon} />
-            </Text>
-          </TouchableOpacity>
-          <Button title='hi' onPress={()=> navigation.navigate('Recorde')} />
-          </ SafeAreaView>
-          
-       )
-     }
-   const styles=StyleSheet.create({
-     container:{
-       flex:1,
-       backgroundColor: '#FFFFFF',
-     },
-     scrollContent:{
-      flexGrow :1,
-     },
-     iconStyle:{
-      backgroundColor :"#FBD38D",
-     },
-     topSection: {
-      flex: 1,
-      backgroundColor: '#FFFFFF',
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-     chatText: {
-      color: 'white',
-      fontSize: 16,
-      fontWeight: 'bold',
-    },
-    chatButton: {
-      position: 'absolute',
-      right: 15,       
-      bottom: 15,     
-      backgroundColor: '#FBD38D', // iOS blue - change as desired
-      width: 60,
-      height: 60,
-      borderRadius: 30,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 3,
-      elevation: 5, // For Android
-    },
-    chatButton1: {
-      position: 'absolute',
-      right: 15,      
-      bottom: 500,     
-      backgroundColor: '#FBD38D', 
-      width: 80,
-      height: 80,
-      borderRadius: 50,
-      justifyContent: 'center',
-      alignItems: 'center',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 3,
-      elevation: 5, // For Android
-    },
-
-    buttonIcon:{
-     color :'#999',
-     fontSize : 28 ,
-     fontWeight :'bold',
-    },
-   containerView:{
-    flex:1 ,
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    
-   },
-   containerView1: {
-    backgroundColor: '#E1B055', // Couleur dorée/jaune
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+  },
+  profileHeader: {
+    alignItems: 'center',
     padding: 20,
-    paddingBottom: 40,
-    justifyContent: 'space-evenly',
-    height: '65%',
+    marginTop: 10,
   },
- buttonshose:{
-
- },
- topPart: {
-  flex: 0.3, // 30% of the screen
-  justifyContent: 'center',
-  alignItems: 'center',
-  borderBottomWidth: 1,
-  borderBottomStyle: 'solid',
-  borderBottomColor: 'black',
-  borderBottomColor: '#ccc',
-},
-middlePart: {
-  flex: 0.5, // 70% of the screen
-  justifyContent: 'center',
-  alignItems: 'center',
-  backgroundColor: 'white', // Optional color
-},
-text: {
-  fontSize: 20,
-  fontWeight: 'bold',
-},
-scrollView: {
-  marginVertical: 20,
-},
-item: {
-  width: 100,
-  height: 100, 
-  marginHorizontal: 10,
-  justifyContent: 'center',
-  alignItems: 'center',
-  borderRadius: 8,
-},
-  tabBarContainer: {
+  profileIconContainer: {
+    backgroundColor: '#FBD38D',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  userName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginRight: 10,
+  },
+  tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#999',
-    height: 50,
-    width: '100%',
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#2c2c2c',
-    marginTop: -267,
+    borderBottomColor: '#eee',
+    height: 60,
   },
-
-    tabItem: {
+  tabButton: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 1,
+    paddingVertical: 10,
   },
-activeTab: {
-    borderBottomWidth: 2,
+  tabLabel: {
+    fontSize: 12,
+    marginTop: 5,
+    color: '#7f8c8d',
+  },
+  activeTab: {
+    borderBottomWidth: 3,
     borderBottomColor: '#FBD38D',
   },
-     middlePart:{
-
-     },
-    
-   })
-
-   
+  content: {
+    flex: 1,
+    padding: 15,
+  },
+  profileContent: {
+    flex: 1,
+    padding: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 15,
+    color: '#333',
+  },
+  chatButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#FBD38D',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  buttonStyle: {
+    height: 40,
+    width: 40,
+    borderRadius: 20,
+    backgroundColor: '#FBD38D',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});

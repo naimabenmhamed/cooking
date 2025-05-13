@@ -1,11 +1,12 @@
-import { View, Text } from 'react-native'
+import { View, Text ,StyleSheet,Button} from 'react-native'
 import React from 'react'
 
 export default function Notes () {
   return (
     <View style={styles.container}>
       <Text style={styles.styleText}>
-        Notes</Text>
+        Notes </Text>
+        
     </View>
   )
 }
@@ -16,7 +17,7 @@ const styles=StyleSheet.create({
     alignItems: 'center', 
   },
   styleText :{
-    fontSize: 56,
+    // fontSize: 56,
     fontWeight: 'bold',
     color :'#999',
    

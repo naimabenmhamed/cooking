@@ -13,6 +13,7 @@ import Chat from "./components/Chat/Chat";
 import ChatListe from "./components/Chat/ChatListe";
 import AddToChat from "./components/Chat/AddToChat";
 import Recorde from "./components/Main/Recorde";
+import Toast from 'react-native-toast-message';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -81,6 +82,7 @@ export default function App() {
   if (initializing) return null;
 
   return (
+    <>
     <NavigationContainer>
       <Stack.Navigator
         initialRouteName={user ? "Home" : "CreatAccont"}
@@ -105,5 +107,7 @@ export default function App() {
          <Stack.Screen name="Recorde" component={Recorde} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
+    <Toast />
+    </>
   );
 }
