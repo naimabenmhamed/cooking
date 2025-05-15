@@ -13,6 +13,7 @@ import Chat from "./components/Chat/Chat";
 import ChatListe from "./components/Chat/ChatListe";
 import AddToChat from "./components/Chat/AddToChat";
 import Recorde from "./components/Main/Recorde";
+import Chat2p from "./components/Chat/Chat2p";
 import Toast from 'react-native-toast-message';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -105,6 +106,7 @@ export default function App() {
         <Stack.Screen name="ChatListe" component={ChatListe} options={{ headerShown: false }} />
         <Stack.Screen name="AddToChat" component={AddToChat} options={{ headerShown: false }} />
          <Stack.Screen name="Recorde" component={Recorde} options={{ headerShown: false }} />
+         <Stack.Screen name="Chat2p" component={Chat2p} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />

@@ -1,31 +1,97 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView, View, StyleSheet, Text, TouchableOpacity, Button } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import Notes from './Notes';
 import Toast from 'react-native-toast-message';
 import ModifierNomComponent from './ModifierN';
-
+import useNomUtilisateur from '../hooks/Nomutillisateur'
+import Recorde from './Recorde'
 export default function Explore({ navigation }) {
   const [activeTab, setActiveTab] = useState(0);
-  const [nom, setNom] = useState('');
+  // const [nom, setNom] = useState('');
   const [showDialog, setShowDialog] = useState(false);
-  const userId = auth().currentUser.uid;
 
-  useEffect(() => {
-    const unsubscribe = firestore()
-      .collection('users')
-      .doc(userId)
-      .onSnapshot(documentSnapshot => {
-        if (documentSnapshot.exists) {
-          const userData = documentSnapshot.data();
-          setNom(userData.nom);
-        }
-      });
+const { nom, setNom, userId } = useNomUtilisateur(); // ✅ AVEC setNom
 
-    return () => unsubscribe();
-  }, []);
+
+useEffect(() => {
+  async function ajouterNomParDefaut() {
+    const usersSnapshot = await firestore().collection('users').get();
+    usersSnapshot.forEach(async (doc) => {
+      const data = doc.data();
+      if (!data.nom) {
+        await firestore().collection('users').doc(doc.id).update({
+          nom: 'Utilisateur',
+        });
+      }
+    });
+  }
+  
+  ajouterNomParDefaut();
+}, []);
+
+// const [userId, setUserId] = useState(null);
+// useEffect(() => {
+//   const authSubscriber = auth().onAuthStateChanged(user => {
+//     if (user) {
+//       setUserId(user.uid);
+//     } else {
+//       setUserId(null);
+//       setNom(''); // Réinitialisation explicite
+//       navigation.navigate('Login');
+//     }
+//   });
+
+//   return authSubscriber;
+// }, [navigation]);
+//   useEffect(() => {
+//   // Vérifier d'abord si userId est valide
+//   if (!userId) {
+//     setNom(''); // Réinitialiser si userId est null
+//     return;
+//   }
+
+//   console.log(`Subscribing to user data for: ${userId}`); // Debug
+
+//   const unsubscribe = firestore()
+//     .collection('users')
+//     .doc(userId)
+//     .onSnapshot(
+//       (documentSnapshot) => {
+//         console.log('Snapshot received:', documentSnapshot.exists); // Debug
+        
+//         if (documentSnapshot.exists) {
+//           const userData = documentSnapshot.data();
+//           console.log('User data:', userData); // Debug
+          
+//           if (userData?.nom) {
+//             setNom(userData.nom);
+//           } else {
+//             console.warn("Le champ 'nom' est manquant dans le document");
+//             setNom(''); // Explicitement réinitialiser si le champ est absent
+//           }
+//         } else {
+//           console.warn("Le document utilisateur n'existe pas");
+//           setNom('');
+//         }
+//       },
+//       (error) => {
+//         console.error("Erreur Firestore:", error);
+//         Toast.show({
+//           type: 'error',
+//           text1: 'Erreur de chargement',
+//           text2: 'Impossible de charger le profil'
+//         });
+//       }
+//     );
+
+//   return () => {
+//     console.log(`Unsubscribing from user data for: ${userId}`); // Debug
+//     unsubscribe();
+//   };
+// }, [userId]); // Dépendance sur userId
 
   const ouvrirModifNom = () => {
     setShowDialog(true);
@@ -79,13 +145,16 @@ export default function Explore({ navigation }) {
       <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chat')}>
         <Icon name="chatbox" size={30} color="#999" />
       </TouchableOpacity>
-
-      // Le composant de dialogue
+       {/* <Button title='hi' onPress={()=> navigation.navigate('Recorde')} /> */}
+      {/* // Le composant de dialogue */}
 {showDialog && (
   <ModifierNomComponent 
     userId={userId} 
     visible={showDialog} 
     onClose={() => setShowDialog(false)} 
+    onNameUpdated={(newName) => { 
+    setNom(newName); // Mise à jour locale
+  }}
   />
 )}
       <Toast />

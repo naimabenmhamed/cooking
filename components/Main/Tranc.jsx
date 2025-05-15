@@ -12,7 +12,7 @@ const uploadAudio = async (audioPath) => {
   });
 
   try {
-    const response = await axios.post('http://192.168.0.137:8000', formData, {
+    const response = await axios.post('http://100.92.64.142:8000', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
