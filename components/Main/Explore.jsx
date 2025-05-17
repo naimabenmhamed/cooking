@@ -23,7 +23,7 @@ useEffect(() => {
       const data = doc.data();
       if (!data.nom) {
         await firestore().collection('users').doc(doc.id).update({
-          nom: 'Utilisateur',
+          nom: 'Hi!',
         });
       }
     });
@@ -107,7 +107,8 @@ useEffect(() => {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={styles.userName}>{nom}</Text>
           <TouchableOpacity onPress={ouvrirModifNom} style={styles.buttonStyle}>
-            <Icon name="id-card-outline" size={30} color="#999" />
+            {/* <Icon name="id-card-outline" size={30} color="#999" /> */}
+            <Text>Edit</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -193,6 +194,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
     height: 60,
+    
   },
   tabButton: {
     flex: 1,
@@ -208,6 +210,7 @@ const styles = StyleSheet.create({
   activeTab: {
     borderBottomWidth: 3,
     borderBottomColor: '#FBD38D',
+    
   },
   content: {
     flex: 1,
@@ -240,8 +243,8 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   buttonStyle: {
-    height: 40,
-    width: 40,
+    height: 30,
+    width: 60,
     borderRadius: 20,
     backgroundColor: '#FBD38D',
     justifyContent: 'center',

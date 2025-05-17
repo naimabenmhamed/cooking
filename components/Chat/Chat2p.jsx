@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import Firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
-
+import Icon from 'react-native-vector-icons/Ionicons';
 const Chat2p = ({ route }) => {
   const { recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
@@ -19,7 +19,6 @@ const Chat2p = ({ route }) => {
   const currentUser = auth().currentUser;
   const flatListRef = useRef(null);
 
-  // Générer un ID de conversation standardisé
   const getChatId = () => {
     const ids = [currentUser.uid, recipientId].sort();
     return `chat_${ids.join('_')}`;
@@ -27,130 +26,118 @@ const Chat2p = ({ route }) => {
 
   const chatId = getChatId();
 
+const initializeChat = async () => {
+    try {
+      const chatRef = Firestore().collection('chats').doc(chatId);
+      const chatDoc = await chatRef.get();
+
+      if (!chatDoc.exists) {
+        await chatRef.set({
+          participants: [currentUser.uid, recipientId],
+          participantNames: {
+            [currentUser.uid]: currentUser.displayName || 'User',
+            [recipientId]: recipientName
+          },
+          createdAt: Firestore.FieldValue.serverTimestamp(),
+          updatedAt: Firestore.FieldValue.serverTimestamp(),
+          lastMessage: "",
+          lastMessageSender: ""
+        });
+      }
+    } catch (error) {
+      console.error("Chat initialization error:", error);
+      Alert.alert("Error", "Could not initialize chat");
+    }
+  };
+
+  const setupChatListener = () => {
+    return Firestore()
+      .collection('chats')
+      .doc(chatId)
+      .collection('messages')
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(
+        (snapshot) => {
+          const messages = [];
+          snapshot.forEach((doc) => {
+            messages.push({
+              id: doc.id,
+              ...doc.data()
+            });
+          });
+          setMessages(messages);
+        },
+        (error) => {
+          console.error("Message listener error:", error);
+          Alert.alert("Error", "Could not load messages");
+        }
+      );
+  };
+
   useEffect(() => {
-    const initializeChat = async () => {
-      const db = Firestore();
-      const batch = db.batch();
+    if (!currentUser) return;
 
-      // Références aux chats des deux utilisateurs
-      const currentUserChatRef = db.collection('users')
-        .doc(currentUser.uid)
-        .collection('chats')
-        .doc(chatId);
+    const init = async () => {
+      await initializeChat();
+      return setupChatListener();
+    };
 
-      const recipientChatRef = db.collection('users')
-        .doc(recipientId)
-        .collection('chats')
-        .doc(chatId);
+    let unsubscribe;
+    init().then((unsub) => {
+      unsubscribe = unsub;
+    });
 
-      // Données du chat
-      const chatData = {
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [currentUser, chatId]);
+
+ const sendMessage = async () => {
+  if (!messageText.trim() || !currentUser) return;
+
+  try {
+    const db = Firestore();
+    const chatRef = db.collection('chats').doc(chatId);
+    
+    // Vérifier si le chat existe, sinon le créer
+    const chatDoc = await chatRef.get();
+    if (!chatDoc.exists) {
+      await chatRef.set({
         participants: [currentUser.uid, recipientId],
         participantNames: {
           [currentUser.uid]: currentUser.displayName || 'Moi',
           [recipientId]: recipientName
         },
-        lastMessage: '',
+        createdAt: Firestore.FieldValue.serverTimestamp(),
         updatedAt: Firestore.FieldValue.serverTimestamp(),
-        createdAt: Firestore.FieldValue.serverTimestamp()
-      };
-
-      // Vérifier et créer les entrées de chat si nécessaire
-      const [currentChat, recipientChat] = await Promise.all([
-        currentUserChatRef.get(),
-        recipientChatRef.get()
-      ]);
-
-      if (!currentChat.exists) {
-        batch.set(currentUserChatRef, chatData);
-      }
-
-      if (!recipientChat.exists) {
-        batch.set(recipientChatRef, chatData);
-      }
-
-      await batch.commit();
-    };
-
-    initializeChat();
-
-    // Écoute des messages
-    const unsubscribe = Firestore()
-      .collection('messages')
-      .doc(chatId)
-      .collection('conversation')
-      .orderBy('createdAt', 'asc')
-      .onSnapshot(querySnapshot => {
-        const msgs = [];
-        querySnapshot?.forEach(doc => {
-          if (doc.exists) {
-            msgs.push({
-              id: doc.id,
-              ...doc.data()
-            });
-          }
-        });
-        setMessages(msgs);
-        
-        if (flatListRef.current && msgs.length > 0) {
-          setTimeout(() => flatListRef.current.scrollToEnd({ animated: true }), 100);
-        }
-      });
-
-    return unsubscribe;
-  }, [chatId]);
-
-  const sendMessage = async () => {
-    if (!messageText.trim()) return;
-
-    try {
-      const db = Firestore();
-      const batch = db.batch();
-      const timestamp = Firestore.FieldValue.serverTimestamp();
-
-      // Références
-      const messageRef = db.collection('messages')
-        .doc(chatId)
-        .collection('conversation')
-        .doc();
-
-      const currentUserChatRef = db.collection('users')
-        .doc(currentUser.uid)
-        .collection('chats')
-        .doc(chatId);
-
-      const recipientChatRef = db.collection('users')
-        .doc(recipientId)
-        .collection('chats')
-        .doc(chatId);
-
-      // Ajouter le message
-      batch.set(messageRef, {
-        text: messageText,
-        senderId: currentUser.uid,
-        createdAt: timestamp
-      });
-
-      // Mettre à jour les métadonnées des chats
-      const updateData = {
         lastMessage: messageText,
-        lastMessageSender: currentUser.uid,
-        updatedAt: timestamp
-      };
-
-      batch.update(currentUserChatRef, updateData);
-      batch.update(recipientChatRef, updateData);
-
-      await batch.commit();
-      setMessageText('');
-    } catch (error) {
-      console.error("Erreur d'envoi:", error);
+        lastMessageSender: currentUser.uid
+      });
     }
-  };
 
-  // ... (renderMessage et le reste du code reste inchangé)
+    // Envoyer le message
+    await chatRef.collection('messages').add({
+      text: messageText,
+      senderId: currentUser.uid,
+      createdAt: Firestore.FieldValue.serverTimestamp()
+    });
+
+    // Mettre à jour le chat
+    await chatRef.update({
+      lastMessage: messageText,
+      lastMessageSender: currentUser.uid,
+      updatedAt: Firestore.FieldValue.serverTimestamp()
+    });
+
+    setMessageText('');
+  } catch (error) {
+    // console.error("Send message error:", error);
+    Alert.alert("Erreur", "Impossible d'envoyer le message");
+  }
+};
+
   const renderMessage = ({ item }) => {
-    const isCurrentUser = item.senderId === currentUser.uid;
+    const isCurrentUser = item.senderId === currentUser?.uid;
     const messageDate = item.createdAt?.toDate() || new Date();
     
     return (
@@ -161,7 +148,10 @@ const Chat2p = ({ route }) => {
         <Text style={isCurrentUser ? styles.currentUserText : styles.otherUserText}>
           {item.text}
         </Text>
-        <Text style={styles.messageTime}>
+        <Text style={[
+          styles.messageTime,
+          isCurrentUser ? styles.currentUserTime : styles.otherUserTime
+        ]}>
           {messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
@@ -184,6 +174,7 @@ const Chat2p = ({ route }) => {
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
+        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
       
       <View style={styles.inputContainer}>
@@ -194,8 +185,13 @@ const Chat2p = ({ route }) => {
           placeholder="Écrivez un message..."
           multiline
         />
-        <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
-          <Text style={styles.sendButtonText}>Envoyer</Text>
+        <TouchableOpacity 
+          style={styles.sendButton} 
+          onPress={sendMessage}
+          disabled={!messageText.trim()}
+        >
+          {/* <Text style={styles.sendButtonText}>Envoyer</Text> */}
+        <Icon  name="send-outline" style={styles.sendButtonText}  size={23}/>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -228,10 +224,12 @@ const styles = StyleSheet.create({
   currentUserMessage: {
     alignSelf: 'flex-end',
     backgroundColor: '#E1B055',
+    borderTopRightRadius: 0,
   },
   otherUserMessage: {
     alignSelf: 'flex-start',
     backgroundColor: '#fff',
+    borderTopLeftRadius: 0,
   },
   currentUserText: {
     color: 'white',
@@ -241,9 +239,14 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.7)',
     marginTop: 4,
     textAlign: 'right',
+  },
+  currentUserTime: {
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  otherUserTime: {
+    color: 'rgba(0, 0, 0, 0.5)',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -274,4 +277,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default Chat2p;
+export default Chat2p;  

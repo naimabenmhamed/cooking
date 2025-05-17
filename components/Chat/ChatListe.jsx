@@ -1,122 +1,124 @@
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import Firestore from '@react-native-firebase/firestore';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 
 export default function ChatList() {
-  const [users, setUsers] = useState([]);
   const [chats, setChats] = useState([]);
-  const [searchMode, setSearchMode] = useState(false);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
   const currentUser = auth().currentUser;
+  const isFocused = useIsFocused();
 
-  // Charger les conversations existantes
   useEffect(() => {
+    if (!currentUser || !isFocused) return;
+
+    setLoading(true);
+    
     const unsubscribe = Firestore()
-      .collection('users')
-      .doc(currentUser.uid)
       .collection('chats')
+      .where('participants', 'array-contains', currentUser.uid)
       .orderBy('updatedAt', 'desc')
-      .onSnapshot(snapshot => {
-        const chatsData = [];
-        snapshot.forEach(doc => {
-          chatsData.push({ id: doc.id, ...doc.data() });
-        });
-        setChats(chatsData);
-      });
+      .onSnapshot(
+        (snapshot) => {
+          const chatsData = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            // Trouver l'autre participant (celui qui n'est pas l'utilisateur actuel)
+            const otherParticipantId = data.participants.find(id => id !== currentUser.uid);
+            
+            if (otherParticipantId) {
+              chatsData.push({ 
+                id: doc.id,
+                chatId: doc.id,
+                otherUserId: otherParticipantId,
+                otherUserName: data.participantNames?.[otherParticipantId] || 'Inconnu',
+                lastMessage: data.lastMessage || '',
+                updatedAt: data.updatedAt?.toDate() || new Date()
+              });
+            }
+          });
+          setChats(chatsData);
+          setLoading(false);
+        },
+        (error) => {
+          console.error("Error fetching chats:", error);
+          setLoading(false);
+          if (error.code === 'failed-precondition') {
+            console.log("Vous devez créer un index dans Firebase Console pour cette requête");
+          }
+        }
+      );
 
     return unsubscribe;
-  }, []);
+  }, [currentUser, isFocused]);
 
-  const fetchUsers = (search) => {
-    if (search.trim() === '') {
-      setUsers([]);
-      setSearchMode(false);
-      return;
-    }
+  const formatDate = (date) => {
+    if (!date) return '';
     
-    setSearchMode(true);
-    Firestore()
-      .collection('users')
-      .where('nom', '>=', search)
-      .where('nom', '<=', search + '\uf8ff')
-      .get()
-      .then((snapshot) => {
-        const usersData = snapshot.docs
-          .filter(doc => doc.id !== currentUser.uid) // Exclure l'utilisateur courant
-          .map(doc => ({ id: doc.id, ...doc.data() }));
-        setUsers(usersData);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (date.toDateString() === yesterday.toDateString()) {
+      return 'Hier';
+    } else {
+      return date.toLocaleDateString('fr-FR', { 
+        day: 'numeric', 
+        month: 'numeric'
       });
-  };
-
-  const startChat = (user) => {
-    navigation.navigate('Chat2p', { 
-      recipientId: user.id,
-      recipientName: user.nom 
-    });
+    }
   };
 
   const renderChatItem = ({ item }) => (
     <TouchableOpacity
       style={styles.chatItem}
       onPress={() => navigation.navigate('Chat2p', {
-        recipientId: item.withUserId,
-        recipientName: item.withUserName
+        recipientId: item.otherUserId,
+        recipientName: item.otherUserName,
+        chatId: item.chatId
       })}
     >
       <View style={styles.avatarPlaceholder}>
         <Text style={styles.avatarText}>
-          {item.withUserName.charAt(0).toUpperCase()}
+          {item.otherUserName?.charAt(0)?.toUpperCase() || '?'}
         </Text>
       </View>
       
       <View style={styles.chatContent}>
-        <Text style={styles.chatName}>{item.withUserName}</Text>
+        <View style={styles.chatHeader}>
+          <Text style={styles.chatName}>{item.otherUserName}</Text>
+          <Text style={styles.chatDate}>{formatDate(item.updatedAt)}</Text>
+        </View>
         <Text style={styles.lastMessage} numberOfLines={1}>
-          {item.lastMessage}
+          {item.lastMessage || 'Aucun message'}
         </Text>
-      </View>
-      
-      <View style={styles.chatMeta}>
-        <Text style={styles.chatTime}>
-          {item.updatedAt?.toDate?.().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) || ''}
-        </Text>
-        {item.lastMessage && <View style={styles.readIndicator} />}
       </View>
     </TouchableOpacity>
   );
 
-  const renderUserItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.userItem}
-      onPress={() => startChat(item)}
-    >
-      <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>
-          {item.nom.charAt(0).toUpperCase()}
-        </Text>
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#E1B055" />
       </View>
-      <Text style={styles.userName}>{item.nom}</Text>
-    </TouchableOpacity>
-  );
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <TextInput 
-        style={styles.input} 
-        placeholder='Rechercher un utilisateur...' 
-        onChangeText={fetchUsers}
-      />
-      
       <FlatList
-        data={searchMode ? users : chats}
+        data={chats}
         keyExtractor={(item) => item.id}
-        renderItem={searchMode ? renderUserItem : renderChatItem}
+        renderItem={renderChatItem}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {searchMode ? 'Aucun utilisateur trouvé' : 'Aucune conversation'}
-          </Text>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aucune conversation</Text>
+            <Text style={styles.emptySubText}>Commencez une nouvelle discussion</Text>
+          </View>
         }
       />
     </View>
@@ -126,36 +128,24 @@ export default function ChatList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#fff',
   },
-  input: {
-    backgroundColor: '#FFF5F0',
-    borderRadius: 15,
-    padding: 15,
-    marginBottom: 16,
-    borderColor: '#E1B055',
-    borderWidth: 1,
-    fontSize: 14,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  userItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    padding: 16,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#dbdbdb',
   },
   avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#E1B055',
     justifyContent: 'center',
     alignItems: 'center',
@@ -164,38 +154,42 @@ const styles = StyleSheet.create({
   avatarText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 20,
   },
   chatContent: {
     flex: 1,
   },
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
   chatName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#000',
+  },
+  chatDate: {
+    fontSize: 12,
+    color: '#8e8e8e',
   },
   lastMessage: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    color: '#8e8e8e',
   },
-  chatMeta: {
-    alignItems: 'flex-end',
-  },
-  chatTime: {
-    fontSize: 12,
-    color: '#999',
-  },
-  readIndicator: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#4CAF50',
-    marginTop: 4,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 100,
   },
   emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#999',
+    fontSize: 18,
+    color: '#262626',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#8e8e8e',
   },
 });
