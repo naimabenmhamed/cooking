@@ -1,46 +1,145 @@
-import React, { Component ,useState,useEffect} from 'react'
-import { StyleSheet ,Button,Text,View,TextInput,TouchableOpacity,ScrollView ,Platform, PermissionsAndroid , Alert} from 'react-native'
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, Alert, Keyboard } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import { uploadAudio } from './Tranc';
+import { CommonActions } from '@react-navigation/native';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
-export default function Add() {
+export default function Add({ navigation, route }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [idToUpdate, setIdToUpdate] = useState(null);
   
-  // États séparés pour le titre
+  // États pour l'audio
   const [titleRecording, setTitleRecording] = useState(false);
   const [titleRecordedFilePath, setTitleRecordedFilePath] = useState('');
   const [titlePlaying, setTitlePlaying] = useState(false);
   const [titleTranscribedText, setTitleTranscribedText] = useState('');
+  const [recording, setRecording] = useState(false);
+    const [recordedFilePath, setRecordedFilePath] = useState('');
+    const [playing, setPlaying] = useState(false);
+    const [transcribedText, setTranscribedText] = useState('');
+   const [recordinge, setRecordinge] = useState(false);
+    const [recordedFilePathe, setRecordedFilePathe] = useState('');
+    const [playinge, setPlayinge] = useState(false);
+    const [transcribedTexte, setTranscribedTexte] = useState('');
   
-  // États séparés pour la description
-  const [descRecording, setDescRecording] = useState(false);
-  const [descRecordedFilePath, setDescRecordedFilePath] = useState('');
-  const [descPlaying, setDescPlaying] = useState(false);
-  const [descTranscribedText, setDescTranscribedText] = useState('');
+  
+  
 
+
+
+
+   useEffect(() => {
+  // Nettoyer quand le composant est démonté
+  return () => {
+    setIdToUpdate(null);
+    setTitle('');
+    setDescription('');
+  };
+}, []);
+  // Effet pour gérer les paramètres de navigation
   useEffect(() => {
+    if (route.params?.id) {
+      // Mode édition - charger les données existantes
+      setIdToUpdate(route.params.id);
+      setTitle(route.params.title || '');
+      setDescription(route.params.description || '');
+    } else {
+      // Mode création - réinitialiser
+      setIdToUpdate(null);
+      setTitle('');
+      setDescription('');
+    }
+  }, [route.params]);
+
+  const handleAddOrUpdate = async () => {
+    const currentUser = auth().currentUser;
+
+    if (!currentUser) {
+      Alert.alert('Erreur', 'Utilisateur non connecté.');
+      return;
+    }
+
+    if (!title.trim()) {
+      Alert.alert('Erreur', 'Le titre est obligatoire');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const userDoc = await firestore()
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+
+      if (!userDoc.exists) {
+        Alert.alert('Erreur', 'Profil utilisateur non trouvé.');
+        return;
+      }
+
+      const userData = userDoc.data();
+      const userName = userData.nom;
+
+      if (idToUpdate) {
+        // Mise à jour de la note existante
+        await firestore()
+          .collection('notes')
+          .doc(idToUpdate)
+          .update({
+            title,
+            description,
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+            userName,
+          });
+      } else {
+        // Création d'une nouvelle note
+        await firestore()
+          .collection('notes')
+          .add({
+            title,
+            description,
+            userId: currentUser.uid,
+            userName,
+            createdAt: firestore.FieldValue.serverTimestamp(),
+            updatedAt: firestore.FieldValue.serverTimestamp(),
+          });
+      }
+
+      // Réinitialiser et naviguer vers ToNotes
+         // Réinitialisation complète
+    setIdToUpdate(null);
+    setTitle('');
+    setDescription('');
+    Keyboard.dismiss();
+    
+    // Naviguer vers ToNotes et nettoyer l'historique
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'ToNotes' }],
+    });
+    } catch (error) {
+      Alert.alert('Erreur', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+ useEffect(() => {
     return () => {
-      if (titleRecording) {
+      if (recording) {
         audioRecorderPlayer.stopRecorder();
       }
-      if (titlePlaying) {
-        audioRecorderPlayer.stopPlayer();
-      }
-      if (descRecording) {
-        audioRecorderPlayer.stopRecorder();
-      }
-      if (descPlaying) {
+      if (playing) {
         audioRecorderPlayer.stopPlayer();
       }
     };
-  }, [titleRecording, titlePlaying, descRecording, descPlaying]);
+  }, [recording, playing]);
 
   const requestPermission = async () => {
     if (Platform.OS === 'android') {
@@ -59,8 +158,77 @@ export default function Add() {
     }
     return true;
   };
+const onStartRecordDescription = async () => {
+  const permission = await requestPermission();
+  if (!permission) {
+    Alert.alert("Permission denied", "The app needs permission to record audio.");
+    return;
+  }
 
-  const onStartRecord = async (forTitle) => {
+  const path = Platform.select({
+    ios: 'description_audio.m4a',
+    android: undefined,
+  });
+
+  try {
+    const uri = await audioRecorderPlayer.startRecorder(path);
+    setRecordedFilePathe(uri);
+    setRecordinge(true);
+    console.log('Recording (description) at:', uri);
+  } catch (error) {
+    console.error('Recording error:', error);
+    Alert.alert('Error', 'Failed to start description recording');
+  }
+};
+
+const onStopRecordDescription = async () => {
+  try {
+    const result = await audioRecorderPlayer.stopRecorder();
+    setRecordinge(false);
+    console.log('Recording (description) finished:', result);
+
+    setTranscribedTexte('Processing transcription...');
+
+    const transcription = await uploadAudio(result);
+    if (transcription) {
+      setTranscribedTexte(transcription);
+    } else {
+      setTranscribedTexte('Transcription failed');
+    }
+  } catch (error) {
+    console.error('Stop recording error:', error);
+    Alert.alert('Error', 'Failed to stop description recording');
+  }
+};
+
+const onStartPlayDescription = async () => {
+  try {
+    await audioRecorderPlayer.startPlayer(recordedFilePathe);
+    audioRecorderPlayer.addPlayBackListener((e) => {
+      if (e.currentPosition === e.duration) {
+        audioRecorderPlayer.removePlayBackListener();
+        setPlayinge(false);
+      }
+    });
+    setPlayinge(true);
+    console.log('Playing description:', recordedFilePathe);
+  } catch (error) {
+    console.error('Playback error:', error);
+    Alert.alert('Error', 'Failed to play description recording');
+  }
+};
+
+const onStopPlayDescription = async () => {
+  try {
+    await audioRecorderPlayer.stopPlayer();
+    audioRecorderPlayer.removePlayBackListener();
+    setPlayinge(false);
+  } catch (error) {
+    console.error('Stop playback error:', error);
+  }
+};
+
+  const onStartRecord = async () => {
     const permission = await requestPermission();
     if (!permission) {
       Alert.alert("Permission denied", "The app needs permission to record audio.");
@@ -74,13 +242,8 @@ export default function Add() {
 
     try {
       const uri = await audioRecorderPlayer.startRecorder(path);
-      if (forTitle) {
-        setTitleRecordedFilePath(uri);
-        setTitleRecording(true);
-      } else {
-        setDescRecordedFilePath(uri);
-        setDescRecording(true);
-      }
+      setRecordedFilePath(uri);
+      setRecording(true);
       console.log('Recording at:', uri);
     } catch (error) {
       console.error('Recording error:', error);
@@ -88,62 +251,50 @@ export default function Add() {
     }
   };
 
-  const onStopRecord = async (forTitle) => {
+  const onStopRecord = async () => {
     try {
       const result = await audioRecorderPlayer.stopRecorder();
-      if (forTitle) {
-        setTitleRecording(false);
-        setTitleTranscribedText('Processing transcription...');
-        const transcription = await uploadAudio(result);
-        setTitleTranscribedText(transcription || 'Transcription failed');
-      } else {
-        setDescRecording(false);
-        setDescTranscribedText('Processing transcription...');
-        const transcription = await uploadAudio(result);
-        setDescTranscribedText(transcription || 'Transcription failed');
-      }
+      setRecording(false);
       console.log('Recording finished:', result);
+      
+      // Show loading message
+      setTranscribedText('Processing transcription...');
+      
+      // Upload and transcribe
+      const transcription = await uploadAudio(result);
+      if (transcription) {
+        setTranscribedText(transcription);
+      } else {
+        setTranscribedText('Transcription failed');
+      }
     } catch (error) {
       console.error('Stop recording error:', error);
       Alert.alert('Error', 'Failed to stop recording');
     }
   };
 
-  const onStartPlay = async (forTitle) => {
+  const onStartPlay = async () => {
     try {
-      const filePath = forTitle ? titleRecordedFilePath : descRecordedFilePath;
-      await audioRecorderPlayer.startPlayer(filePath);
+      await audioRecorderPlayer.startPlayer(recordedFilePath);
       audioRecorderPlayer.addPlayBackListener((e) => {
         if (e.currentPosition === e.duration) {
           audioRecorderPlayer.removePlayBackListener();
-          if (forTitle) {
-            setTitlePlaying(false);
-          } else {
-            setDescPlaying(false);
-          }
+          setPlaying(false);
         }
       });
-      if (forTitle) {
-        setTitlePlaying(true);
-      } else {
-        setDescPlaying(true);
-      }
-      console.log('Playing from:', filePath);
+      setPlaying(true);
+      console.log('Playing from:', recordedFilePath);
     } catch (error) {
       console.error('Playback error:', error);
       Alert.alert('Error', 'Failed to play recording');
     }
   };
 
-  const onStopPlay = async (forTitle) => {
+  const onStopPlay = async () => {
     try {
       await audioRecorderPlayer.stopPlayer();
       audioRecorderPlayer.removePlayBackListener();
-      if (forTitle) {
-        setTitlePlaying(false);
-      } else {
-        setDescPlaying(false);
-      }
+      setPlaying(false);
     } catch (error) {
       console.error('Stop playback error:', error);
     }
@@ -157,24 +308,24 @@ export default function Add() {
           {/* Section Titre */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
             <Text style={styles.label}>عنوان</Text>
-            {titleRecordedFilePath !== '' && !titlePlaying && (
+            {recordedFilePath !== '' && !playing &&  (
               <TouchableOpacity 
                 style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={() => onStartPlay(true)}>
+                onPress={onStartPlay}>
                 <Icon name="volume-mute-outline" size={43} color="#999"/>
               </TouchableOpacity>
             )}
-            {titlePlaying && (
+            {playing &&(
               <TouchableOpacity 
                 style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}} 
-                onPress={() => onStopPlay(true)}>
+                onPress={onStopPlay}>
                 <Icon name="volume-high-outline" size={43} color="#999"/>
               </TouchableOpacity>
             )}
-            {!titleRecording ? (
+            {!recording ? (
               <TouchableOpacity 
                 style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={() => onStartRecord(true)}>
+                onPress={onStartRecord}>
                 <Icon name="mic-outline" size={43} color="#999" />
               </TouchableOpacity>
             ) : (
@@ -195,30 +346,30 @@ export default function Add() {
           {/* Section Description */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
             <Text style={styles.label}>وصف</Text>
-            {descRecordedFilePath !== '' && !descPlaying && (
+            {recordedFilePathe !== '' && !playinge &&  (
               <TouchableOpacity 
                 style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={() => onStartPlay(false)}>
+                onPress={onStartPlayDescription}>
                 <Icon name="volume-mute-outline" size={43} color="#999"/>
               </TouchableOpacity>
             )}
-            {descPlaying && (
+            {playinge && (
               <TouchableOpacity 
                 style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}} 
-                onPress={() => onStopPlay(false)}>
+                onPress={onStopPlayDescription}>
                 <Icon name="volume-high-outline" size={43} color="#999"/>
               </TouchableOpacity>
             )}
-            {!descRecording ? (
+            {!recordinge ?  (
               <TouchableOpacity 
                 style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={() => onStartRecord(false)}>
+                onPress={onStartRecordDescription}>
                 <Icon name="mic-outline" size={43} color="#999" />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
                 style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={() => onStopRecord(false)}>
+                onPress={onStopRecordDescription}>
                 <Icon name="ellipsis-horizontal-outline" size={43} color="#999" />
               </TouchableOpacity>
             )}
@@ -231,13 +382,19 @@ export default function Add() {
             multiline
             numberOfLines={5}
           />
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>يضيف</Text>
+          <TouchableOpacity 
+            style={styles.button} 
+            onPress={handleAddOrUpdate}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'جاري الحفظ...' : (idToUpdate ? 'تعديل' : 'إضافة')}
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
