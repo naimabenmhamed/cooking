@@ -146,7 +146,7 @@ useEffect(() => {
       <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chat')}>
         <Icon name="chatbox" size={30} color="#999" />
       </TouchableOpacity>
-       {/* <Button title='hi' onPress={()=> navigation.navigate('Recorde')} /> */}
+       <Button title='hi' onPress={()=> navigation.navigate('Recorde')} />
       {/* // Le composant de dialogue */}
 {showDialog && (
   <ModifierNomComponent 
