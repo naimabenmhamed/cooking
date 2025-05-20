@@ -49,7 +49,7 @@ const AudioScreen = () => {
     }
 
     const path = Platform.select({
-      ios: 'audio.m4a',
+      ios: 'audio.mp3',
       android: undefined, // Android will use default path
     });
 
