@@ -32,66 +32,7 @@ useEffect(() => {
   ajouterNomParDefaut();
 }, []);
 
-// const [userId, setUserId] = useState(null);
-// useEffect(() => {
-//   const authSubscriber = auth().onAuthStateChanged(user => {
-//     if (user) {
-//       setUserId(user.uid);
-//     } else {
-//       setUserId(null);
-//       setNom(''); // Réinitialisation explicite
-//       navigation.navigate('Login');
-//     }
-//   });
 
-//   return authSubscriber;
-// }, [navigation]);
-//   useEffect(() => {
-//   // Vérifier d'abord si userId est valide
-//   if (!userId) {
-//     setNom(''); // Réinitialiser si userId est null
-//     return;
-//   }
-
-//   console.log(`Subscribing to user data for: ${userId}`); // Debug
-
-//   const unsubscribe = firestore()
-//     .collection('users')
-//     .doc(userId)
-//     .onSnapshot(
-//       (documentSnapshot) => {
-//         console.log('Snapshot received:', documentSnapshot.exists); // Debug
-        
-//         if (documentSnapshot.exists) {
-//           const userData = documentSnapshot.data();
-//           console.log('User data:', userData); // Debug
-          
-//           if (userData?.nom) {
-//             setNom(userData.nom);
-//           } else {
-//             console.warn("Le champ 'nom' est manquant dans le document");
-//             setNom(''); // Explicitement réinitialiser si le champ est absent
-//           }
-//         } else {
-//           console.warn("Le document utilisateur n'existe pas");
-//           setNom('');
-//         }
-//       },
-//       (error) => {
-//         console.error("Erreur Firestore:", error);
-//         Toast.show({
-//           type: 'error',
-//           text1: 'Erreur de chargement',
-//           text2: 'Impossible de charger le profil'
-//         });
-//       }
-//     );
-
-//   return () => {
-//     console.log(`Unsubscribing from user data for: ${userId}`); // Debug
-//     unsubscribe();
-//   };
-// }, [userId]); // Dépendance sur userId
 
   const ouvrirModifNom = () => {
     setShowDialog(true);
@@ -214,7 +155,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    padding: 15,
+    padding: 5,
   },
   profileContent: {
     flex: 1,

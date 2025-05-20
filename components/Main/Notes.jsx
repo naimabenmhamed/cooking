@@ -4,6 +4,7 @@ import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function ToNotes() {
   const [texts, setTexts] = useState([]);
@@ -61,6 +62,7 @@ export default function ToNotes() {
     <SafeAreaView style={styles.container}>
       <FlatList
         data={texts}
+        style={{paddingBottom: 80}}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
@@ -69,16 +71,18 @@ export default function ToNotes() {
               title: item.title,
               description: item.description
             })}
+            style={styles.fletlisteStyle}
           >
             <View style={styles.noteView}>
-              <Text style={styles.noteTitle}>{item.title}</Text>
-              <Text style={styles.noteText}>{item.description}</Text>
+              <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
+              <Text style={styles.noteText} numberOfLines={2}>{item.description}</Text>
               <Text style={styles.noteDate}>{formatDate(item.createdAt)}</Text>
               <TouchableOpacity
                 onPress={() => handleDeleteText(item.id)}
                 style={styles.deleteButton}
               >
-                <Text style={{ color: 'white' }}>Supprimer</Text>
+                {/* <Text style={{ color: 'white' }}>Supprimer</Text> */}
+                <Icon name="trash-outline" size={19} color="#999" />
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -93,16 +97,21 @@ const styles = StyleSheet.create({
     flex: 1,
     // backgroundColor: '#c9f5d9',
     padding: 10,
+    
   },
   noteView: {
     backgroundColor: '#fff',
-    marginVertical: 8,
-    padding: 15,
+    marginHorizontal: 8, // Espace entre les colonnes (horizontal)
+    marginVertical: -9, 
+    padding: 45,
     borderRadius: 10,
-    shadowColor: 'red',
+    shadowColor: '#FBD38D',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     elevation: 4,
+    flexDirection: 'row',
+    alignItems: 'center', 
+    justifyContent: 'space-between'
   },
   noteTitle: {
     fontSize: 16,
@@ -119,11 +128,19 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   deleteButton: {
-    backgroundColor: 'crimson',
-    padding: 8,
-    borderRadius: 5,
+    backgroundColor: '#FBD38D',
+    padding: 5,
+    borderRadius: 15,
     alignItems: 'center',
     marginTop: 5,
-    width: '30%',
+    width: '20%',
+    
   },
+  fletlisteStyle:{
+    flexDirection: 'row',
+    alignItems: 'center', 
+    justifyContent: 'space-between',
+     flex: 1,
+    padding: 10,
+  }
 });
