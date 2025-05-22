@@ -8,9 +8,17 @@ export default function Login({navigation})  {
  const [password,setPassword]=useState('');
  const handleLogin = async () => {
   try {
-    await auth().signInWithEmailAndPassword(email, password);
-    Alert.alert('Succès', 'Connexion réussie');
-    navigation.navigate('Home');
+     const userCredential= await auth().signInWithEmailAndPassword(email, password);
+    await userCredential.user.reload();
+    const verified = userCredential.user.emailVerified;
+    if (verified) {
+        Alert.alert('Bienvenue !', 'Ton e-mail est vérifié.');
+        Alert.alert('Succès', 'Connexion réussie');
+        navigation.navigate('Home');
+      } else {
+        Alert.alert('E-mail non vérifié', 'Vérifie ta boîte mail avant de continuer.');
+        await auth().signOut();
+      }
   } catch (error) {
     Alert.alert('Erreur', error.message);
   }

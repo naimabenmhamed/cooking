@@ -26,14 +26,14 @@ export const uploadAudio = async (audioPath) => {
       timeout: 30000,
     });
 
-    console.log('✅ Transcription response:', response.data);
+    console.log('Transcription response:', response.data);
     return response.data.transcription;
   } catch (error) {
-    console.error('❌ Upload error details:', error.message);
+    console.error(' Upload error details:', error.message);
     if (error.response) {
-      console.error('🔁 Server responded with:', error.response.status, error.response.data);
+      console.error(' Server responded with:', error.response.status, error.response.data);
     } else if (error.request) {
-      console.error('⚠️ No response received:', error.request);
+      console.error(' No response received:', error.request);
     }
     return null;
   }
