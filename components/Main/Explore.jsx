@@ -6,6 +6,7 @@ import firestore from '@react-native-firebase/firestore';
 import Notes from './Notes';
 import Toast from 'react-native-toast-message';
 import ModifierNomComponent from './ModifierN';
+import ChatList from '../Chat/ChatListe';
 import useNomUtilisateur from '../hooks/Nomutillisateur'
 import Recorde from './Recorde'
 export default function Explore({ navigation }) {
@@ -84,10 +85,10 @@ useEffect(() => {
       </View>
 
       {/* Bouton de chat */}
-      <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chat')}>
+      <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('ChatListe')}>
         <Icon name="chatbox" size={30} color="#999" />
       </TouchableOpacity>
-       <Button title='hi' onPress={()=> navigation.navigate('Recorde')} />
+       {/* <Button title='hi' onPress={()=> navigation.navigate('Recorde')} /> */}
       {/* // Le composant de dialogue */}
 {showDialog && (
   <ModifierNomComponent 

@@ -12,7 +12,8 @@ import {
 import Firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
-const Chat2p = ({ route }) => {
+import ChatList from './ChatListe';
+const Chat2p = ({ route , navigation }) => {
   const { recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
@@ -33,6 +34,7 @@ const initializeChat = async () => {
 
       if (!chatDoc.exists) {
         await chatRef.set({
+          
           participants: [currentUser.uid, recipientId],
           participantNames: {
             [currentUser.uid]: currentUser.displayName || 'User',
@@ -49,30 +51,70 @@ const initializeChat = async () => {
       Alert.alert("Error", "Could not initialize chat");
     }
   };
+  const markMessagesAsRead = async () => {
+  const messagesRef = Firestore()
+    .collection('chats')
+    .doc(chatId)
+    .collection('messages');
 
-  const setupChatListener = () => {
-    return Firestore()
-      .collection('chats')
-      .doc(chatId)
-      .collection('messages')
-      .orderBy('createdAt', 'asc')
-      .onSnapshot(
-        (snapshot) => {
-          const messages = [];
-          snapshot.forEach((doc) => {
-            messages.push({
-              id: doc.id,
-              ...doc.data()
-            });
+  const snapshot = await messagesRef
+    .where('readBy', 'not-in', [currentUser.uid]) // messages non encore lus
+    .get();
+
+  const batch = Firestore().batch();
+
+  snapshot.forEach((doc) => {
+    batch.update(doc.ref, {
+      readBy: Firestore.FieldValue.arrayUnion(currentUser.uid)
+    });
+  });
+
+  await batch.commit();
+};
+
+
+ const setupChatListener = () => {
+  return Firestore()
+    .collection('chats')
+    .doc(chatId)
+    .collection('messages')
+    .orderBy('createdAt', 'asc')
+    .onSnapshot(
+      async (snapshot) => { // ✅ marquer cette fonction comme async
+        const messages = [];
+        snapshot.forEach((doc) => {
+          messages.push({
+            id: doc.id,
+            ...doc.data()
           });
-          setMessages(messages);
-        },
-        (error) => {
-          console.error("Message listener error:", error);
-          Alert.alert("Error", "Could not load messages");
-        }
-      );
-  };
+        });
+        setMessages(messages);
+
+        await markMessagesAsRead(); // ✅ maintenant c'est autorisé
+      },
+      (error) => {
+        console.error("Message listener error:", error);
+        Alert.alert("Erreur", "Impossible de charger les messages");
+      }
+    );
+};
+
+  const [isRecipientOnline, setIsRecipientOnline] = useState(false);
+
+useEffect(() => {
+  const unsubscribe = Firestore()
+    .collection('users')
+    .doc(recipientId)
+    .onSnapshot((doc) => {
+      if (doc.exists) {
+        const data = doc.data();
+        setIsRecipientOnline(data.isOnline || false);
+      }
+    });
+
+  return () => unsubscribe();
+}, [recipientId]);
+
 
   useEffect(() => {
     if (!currentUser) return;
@@ -119,7 +161,9 @@ const initializeChat = async () => {
     await chatRef.collection('messages').add({
       text: messageText,
       senderId: currentUser.uid,
-      createdAt: Firestore.FieldValue.serverTimestamp()
+      createdAt: Firestore.FieldValue.serverTimestamp(),
+       isRead: false, 
+        readBy: [currentUser.uid],
     });
 
     // Mettre à jour le chat
@@ -130,6 +174,7 @@ const initializeChat = async () => {
     });
 
     setMessageText('');
+    navigation.navigate('ChatList');
   } catch (error) {
     // console.error("Send message error:", error);
     Alert.alert("Erreur", "Impossible d'envoyer le message");
@@ -145,6 +190,8 @@ const initializeChat = async () => {
         styles.messageContainer,
         isCurrentUser ? styles.currentUserMessage : styles.otherUserMessage
       ]}>
+        
+  
         <Text style={isCurrentUser ? styles.currentUserText : styles.otherUserText}>
           {item.text}
         </Text>
@@ -154,18 +201,27 @@ const initializeChat = async () => {
         ]}>
           {messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
+        <Text style={styles.statusText}>
+  {item.senderId === currentUser.uid ? (
+    item.readBy?.length > 1 ? <Icon name="checkmark-done-outline"></Icon> : <Icon name="checkmark-outline"></Icon>
+  ) : null}
+</Text>
+
       </View>
     );
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'Android' ? 'padding' : 'height'}
       style={styles.container}
       keyboardVerticalOffset={90}
     >
       <View style={styles.header}>
         <Text style={styles.headerText}>Discussion avec {recipientName}</Text>
+        <Text style={styles.statusText}>
+    {isRecipientOnline ?  'en ligne': 'pas en ligne'}
+  </Text>
       </View>
       
       <FlatList
@@ -271,6 +327,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#E1B055',
     borderRadius: 20,
   },
+  statusText: {
+  color: 'white',
+  fontSize: 14,
+  fontStyle: 'italic',
+  marginTop: 4,
+},
+
   sendButtonText: {
     color: 'white',
     fontWeight: 'bold',

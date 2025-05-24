@@ -1,47 +1,64 @@
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity } from 'react-native';
-import React, { useState } from 'react';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
 import Firestore from '@react-native-firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 
 export default function AddToChat() {
   const [users, setUsers] = useState([]);
+  const [randomUsers, setRandomUsers] = useState([]);
+  const [search, setSearch] = useState('');
   const navigation = useNavigation();
   const currentUser = auth().currentUser;
 
-  const fetchUsers = async (search) => {
-    if (search.trim() === '') {
+  useEffect(() => {
+    // Charger des utilisateurs aléatoires au démarrage
+    const fetchRandomUsers = async () => {
+      try {
+        const snapshot = await Firestore().collection('users').get();
+        const userList = snapshot.docs
+          .filter(doc => doc.id !== currentUser?.uid)
+          .map(doc => ({ id: doc.id, ...doc.data() }));
+        const shuffled = userList.sort(() => 0.5 - Math.random());
+        setRandomUsers(shuffled.slice(0, 10)); // max 10 aléatoires
+      } catch (error) {
+        console.error("Erreur chargement utilisateurs aléatoires :", error);
+      }
+    };
+
+    fetchRandomUsers();
+  }, []);
+
+  const fetchUsers = async (searchText) => {
+    setSearch(searchText);
+
+    if (searchText.trim() === '') {
       setUsers([]);
       return;
     }
-    
+
     try {
       const snapshot = await Firestore()
         .collection('users')
-        .where('nom', '>=', search)
-        .where('nom', '<=', search + '\uf8ff')
+        .where('nom', '>=', searchText)
+        .where('nom', '<=', searchText + '\uf8ff')
         .get();
 
       const usersData = snapshot.docs
         .filter(doc => doc.id !== currentUser?.uid)
         .map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       setUsers(usersData);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("Erreur recherche utilisateurs :", error);
     }
   };
 
   const startChat = async (user) => {
     try {
-      // Créez un ID de chat standardisé
       const ids = [currentUser.uid, user.id].sort();
       const chatId = `chat_${ids.join('_')}`;
-      
-      const db = Firestore();
-      const chatRef = db.collection('chats').doc(chatId);
-
-      // Vérifiez si le chat existe déjà
+      const chatRef = Firestore().collection('chats').doc(chatId);
       const chatDoc = await chatRef.get();
 
       if (!chatDoc.exists) {
@@ -58,30 +75,31 @@ export default function AddToChat() {
         });
       }
 
-      // Naviguez vers le chat
-      navigation.navigate('Chat2p', { 
+      navigation.navigate('Chat2p', {
         recipientId: user.id,
-        recipientName: user.nom 
+        recipientName: user.nom
       });
 
     } catch (error) {
-      console.error("Error starting chat:", error);
+      console.error("Erreur démarrage chat :", error);
       Alert.alert("Erreur", "Impossible de démarrer la conversation");
     }
   };
 
+  const dataToDisplay = search.trim() === '' ? randomUsers : users;
+
   return (
     <View style={styles.container}>
-      <TextInput 
-        style={styles.input} 
-        placeholder='Rechercher un utilisateur...' 
+      <TextInput
+        style={styles.input}
+        placeholder='Rechercher un utilisateur...'
         onChangeText={fetchUsers}
       />
-      
+
       <FlatList
-        data={users}
+        data={dataToDisplay}
         keyExtractor={(item) => item.id}
-        renderItem={({item}) => (
+        renderItem={({ item }) => (
           <TouchableOpacity
             style={styles.userItem}
             onPress={() => startChat(item)}
@@ -96,7 +114,7 @@ export default function AddToChat() {
         )}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            Aucun utilisateur trouvé
+            Chargement...
           </Text>
         }
       />

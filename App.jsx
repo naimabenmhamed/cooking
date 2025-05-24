@@ -105,7 +105,7 @@ export default function App() {
         <Stack.Screen name="Explore" component={Explore} options={{ headerShown: false }} />
         <Stack.Screen name="Chat" component={Chat} options={{ headerShown: false }} />
         <Stack.Screen name="ChatListe" component={ChatListe} options={{ headerShown: false }} />
-        <Stack.Screen name="AddToChat" component={AddToChat} options={{ headerShown: false }} />
+        <Stack.Screen name="AddToChat" component={AddToChat}  />
          <Stack.Screen name="Recorde" component={Recorde} options={{ headerShown: false }} />
          <Stack.Screen name="Chat2p" component={Chat2p} options={{ headerShown: false }} />
          <Stack.Screen name="Notes" component={ToNotes} options={{ headerShown: false }} />

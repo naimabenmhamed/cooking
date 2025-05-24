@@ -8,7 +8,7 @@ model = whisper.load_model("small")
 
 @app.post("/")
 async def transcribe_audio(file: UploadFile = File(...)):
-    print("✅ Fichier reçu :", file.filename)
+    print(" Fichier reçu :", file.filename)
     try:
         ext = file.filename.split('.')[-1]
         temp_input = f"temp_audio.{ext}"

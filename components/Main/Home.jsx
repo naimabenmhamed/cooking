@@ -1,11 +1,11 @@
 import { StyleSheet, View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
 import auth from '@react-native-firebase/auth';
 export default function Home({ navigation }) {  
-  // Ajoutez navigation dans les props
+ 
   const handleLogout = async () => {
     try {
       await auth().signOut();
-      navigation.navigate('CreatAccont');  // Navigation vers l'écran de connexion
+      navigation.navigate('CreatAccont');  
     } catch (error) {
       Alert.alert('Erreur', error.message);
     }
@@ -19,14 +19,13 @@ export default function Home({ navigation }) {
         style={styles.input} 
       />
       
-      {/* Bouton de déconnexion stylisé */}
+     
       <TouchableOpacity 
         style={styles.logoutButton} 
         onPress={handleLogout}
         
       >
-        <Text style={styles.logoutText}>تسجيل الخروج</Text>  {/* "Déconnexion" en arabe */}
-        
+        <Text style={styles.logoutText}>تسجيل الخروج</Text>
       </TouchableOpacity>
       
     </View>
