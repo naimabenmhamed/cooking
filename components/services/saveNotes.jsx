@@ -8,14 +8,19 @@ export const saveNotes= (route, navigation) => {
     const [description, setDescription] = useState('');
     const [loading, setLoading] = useState(false);
     const [idToUpdate, setIdToUpdate] = useState(null);
-  const [initialTitle, setInitialTitle] = useState('');
+    const [initialTitle, setInitialTitle] = useState('');
     const [initialDescription, setInitialDescription] = useState('');
+    const [ingredient, setIngredient] = useState('');
+    const [initialIngredient, setInitialIngredient] = useState('');
+    const [visibility, setVisibility] = useState('private'); // par défaut privée
+
   useEffect(() => {
    // Nettoyer quand le composant est démonté
    return () => {
      setIdToUpdate(null);
      setTitle('');
      setDescription('');
+     setIngredient('');
    };
  }, []);
    // Effet pour gérer les paramètres de navigation
@@ -25,6 +30,7 @@ export const saveNotes= (route, navigation) => {
        setIdToUpdate(route.params.id);
        setTitle(route.params.title || '');
        setDescription(route.params.description || '');
+       setIngredient(route.params.ingredient || '');
      } else {
        // Mode création - réinitialiser
        setIdToUpdate(null);
@@ -32,6 +38,7 @@ export const saveNotes= (route, navigation) => {
        setDescription('');
         setInitialTitle('');
      setInitialDescription('');
+     setIngredient('');
      }
    }, [route.params]);
  
@@ -47,7 +54,7 @@ export const saveNotes= (route, navigation) => {
        Alert.alert('Erreur', 'Le titre est obligatoire');
        return;
      }
-     if (idToUpdate && title.trim() === initialTitle.trim() && description.trim() === initialDescription.trim()) {
+     if (idToUpdate && title.trim() === initialTitle.trim() && description.trim() === initialDescription.trim() && ingredient.trim() === initialIngredient.trim()) {
      Alert.alert('تنبيه', 'لم يتم أي تعديل'); // Pas de modifications
      navigation.goBack(); // Retourner sans modifier
      return;
@@ -75,6 +82,8 @@ export const saveNotes= (route, navigation) => {
            .update({
              title,
              description,
+             ingredient,
+              visibility,
              updatedAt: firestore.FieldValue.serverTimestamp(),
              userName,
            });
@@ -85,8 +94,10 @@ export const saveNotes= (route, navigation) => {
            .add({
              title,
              description,
+             ingredient ,
              userId: currentUser.uid,
              userName,
+              visibility,
              createdAt: firestore.FieldValue.serverTimestamp(),
              updatedAt: firestore.FieldValue.serverTimestamp(),
            });
@@ -97,6 +108,7 @@ export const saveNotes= (route, navigation) => {
      setIdToUpdate(null);
      setTitle('');
      setDescription('');
+     setIngredient('');
      Keyboard.dismiss();
      
      // Naviguer vers ToNotes et nettoyer l'historique
@@ -125,5 +137,9 @@ export const saveNotes= (route, navigation) => {
     setInitialDescription,
     handleAddOrUpdate,
     loading,
+    ingredient,
+    setIngredient,
+    visibility,            // <= ajoute ceci
+  setVisibility 
   };
 };

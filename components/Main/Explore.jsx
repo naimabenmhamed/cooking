@@ -4,6 +4,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import Notes from './Notes';
+import NotesPr from './NotesPr';
+import styles from '../Styles/Explore.styles';
 import Toast from 'react-native-toast-message';
 import ModifierNomComponent from './ModifierN';
 import ChatList from '../Chat/ChatListe';
@@ -77,11 +79,7 @@ useEffect(() => {
       {/* Contenu principal */}
       <View style={styles.content}>
         {activeTab === 0 && <Notes />}
-        {activeTab === 1 && (
-          <View style={styles.profileContent}>
-            <Text style={styles.sectionTitle}>Informations personnelles</Text>
-          </View>
-        )}
+        {activeTab === 1 && <NotesPr />}
       </View>
 
       {/* Bouton de chat */}
@@ -103,93 +101,4 @@ useEffect(() => {
       <Toast />
     </SafeAreaView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  profileHeader: {
-    alignItems: 'center',
-    padding: 20,
-    marginTop: 10,
-  },
-  profileIconContainer: {
-    backgroundColor: '#FBD38D',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  userName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    marginRight: 10,
-  },
-  tabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    height: 60,
-    
-  },
-  tabButton: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 10,
-  },
-  tabLabel: {
-    fontSize: 12,
-    marginTop: 5,
-    color: '#7f8c8d',
-  },
-  activeTab: {
-    borderBottomWidth: 3,
-    borderBottomColor: '#FBD38D',
-    
-  },
-  content: {
-    flex: 1,
-    padding: 5,
-  },
-  profileContent: {
-    flex: 1,
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#333',
-  },
-  chatButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 20,
-    backgroundColor: '#FBD38D',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 5,
-  },
-  buttonStyle: {
-    height: 30,
-    width: 60,
-    borderRadius: 20,
-    backgroundColor: '#FBD38D',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+};

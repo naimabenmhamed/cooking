@@ -22,6 +22,11 @@ export const Audio = ({navigation , route}) => {
       const [playinge, setPlayinge] = useState(false);
       const [transcribedTexte, setTranscribedTexte] = useState('');
 
+       const [recordinges, setRecordinges] = useState(false);
+      const [recordedFilePathes, setRecordedFilePathes] = useState('');
+      const [playinges, setPlayinges] = useState(false);
+      const [transcribedTextes, setTranscribedTextes] = useState('');
+
 useEffect(() => {
     return () => {
       if (recording) {
@@ -119,6 +124,79 @@ const onStopPlayDescription = async () => {
     console.error('Stop playback error:', error);
   }
 };
+
+const onStartRecordIngredient = async () => {
+  const permission = await requestPermission();
+  if (!permission) {
+    Alert.alert("Permission denied", "The app needs permission to record audio.");
+    return;
+  }
+
+  const path = Platform.select({
+    ios: 'description_audio.m4a',
+    android: undefined,
+  });
+
+  try {
+    const uri = await audioRecorderPlayer.startRecorder(path);
+    setRecordedFilePathes(uri);
+    setRecordinges(true);
+    console.log('Recording (description) at:', uri);
+  } catch (error) {
+    console.error('Recording error:', error);
+    Alert.alert('Error', 'Failed to start description recording');
+  }
+};
+
+const onStopRecordIngredient = async () => {
+  try {
+    const result = await audioRecorderPlayer.stopRecorder();
+    setRecordinges(false);
+    console.log('Recording (description) finished:', result);
+
+    setTranscribedTextes('Processing transcription...');
+
+    const transcription = await uploadAudio(result);
+    if (transcription) {
+      setTranscribedTextes(transcription);
+    } else {
+      setTranscribedTextes('Transcription failed');
+    }
+  } catch (error) {
+    console.error('Stop recording error:', error);
+    Alert.alert('Error', 'Failed to stop description recording');
+  }
+};
+
+const onStartPlayIngredient = async () => {
+  try {
+    await audioRecorderPlayer.startPlayer(recordedFilePathe);
+    audioRecorderPlayer.addPlayBackListener((e) => {
+      if (e.currentPosition === e.duration) {
+        audioRecorderPlayer.removePlayBackListener();
+        setPlayinges(false);
+      }
+    });
+    setPlayinges(true);
+    console.log('Playing description:', recordedFilePathe);
+  } catch (error) {
+    console.error('Playback error:', error);
+    Alert.alert('Error', 'Failed to play description recording');
+  }
+};
+
+const onStopPlayIngredient = async () => {
+  try {
+    await audioRecorderPlayer.stopPlayer();
+    audioRecorderPlayer.removePlayBackListener();
+    setPlayinges(false);
+  } catch (error) {
+    console.error('Stop playback error:', error);
+  }
+};
+
+
+
 
   const onStartRecord = async () => {
     const permission = await requestPermission();
@@ -225,7 +303,20 @@ const onStopPlayDescription = async () => {
   onStartRecordDescription,
   onStopRecordDescription,
   onStartPlayDescription,
-  onStopPlayDescription
+  onStopPlayDescription,
+  onStartRecordIngredient,
+  onStopRecordIngredient,
+  onStartPlayIngredient,
+  onStopPlayIngredient,
+  
+recordinges, 
+  setRecordinges,
+  recordedFilePathes, 
+  setRecordedFilePathes,
+  playinges, 
+  setPlayinges,
+  transcribedTextes, 
+  setTranscribedTextes,
 };
 
 }

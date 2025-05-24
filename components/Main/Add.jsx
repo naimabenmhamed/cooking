@@ -8,6 +8,7 @@ import { uploadAudio } from './Tranc';
 import { CommonActions } from '@react-navigation/native';
 import { saveNotes } from '../services/saveNotes';
 import {Audio } from '../hooks/Audio';
+import styles from '../Styles/Add.styles';
 const audioRecorderPlayer = new AudioRecorderPlayer();
 
 export default function Add({ navigation, route }) {
@@ -15,7 +16,7 @@ export default function Add({ navigation, route }) {
 
 
   const {
-     idToUpdate,
+    idToUpdate,
     title,
     setTitle,
     description,
@@ -27,6 +28,8 @@ export default function Add({ navigation, route }) {
     setInitialDescription,
     handleAddOrUpdate,
     loading,
+    ingredient,
+    setIngredient,
   } = saveNotes(route, navigation);
   // États pour l'audio
  
@@ -64,7 +67,21 @@ export default function Add({ navigation, route }) {
   onStartRecordDescription,
   onStopRecordDescription,
   onStartPlayDescription,
-  onStopPlayDescription
+  onStopPlayDescription,
+  onStartRecordIngredient,
+  onStopRecordIngredient,
+  onStartPlayIngredient,
+  onStopPlayIngredient,
+  recordinges, 
+  setRecordinges,
+  recordedFilePathes, 
+  setRecordedFilePathes,
+  playinges, 
+  setPlayinges,
+  transcribedTextes, 
+  setTranscribedTextes,
+  visibility,            // <= ajoute ceci
+  setVisibility 
   } = Audio(route, navigation);
 
 const handleCancelEdit = () => {
@@ -117,9 +134,51 @@ const handleCancelEdit = () => {
             value={title}
             onChangeText={setTitle}
             placeholder="أدخل عنوانًا"
+             placeholderTextColor="#999" 
           />
 
-          {/* Section Description */}
+          {/* Section ingredient */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
+            <Text style={styles.label}>مكونات</Text>
+            {recordedFilePathes !== '' && !playinges &&  (
+              <TouchableOpacity 
+                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                onPress={onStartPlayIngredient}>
+                <Icon name="volume-mute-outline" size={43} color="#999"/>
+              </TouchableOpacity>
+            )}
+            {playinges && (
+              <TouchableOpacity 
+                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}} 
+                onPress={onStopPlayIngredient}>
+                <Icon name="volume-high-outline" size={43} color="#999"/>
+              </TouchableOpacity>
+            )}
+            {!recordinges ?  (
+              <TouchableOpacity 
+                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                onPress={onStartRecordIngredient}>
+                <Icon name="mic-outline" size={43} color="#999" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity 
+                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                onPress={onStopRecordIngredient}>
+                <Icon name="ellipsis-horizontal-outline" size={43} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={ingredient}
+            onChangeText={setIngredient}
+            placeholder="أدخل وصفًا"
+             placeholderTextColor="#999" 
+            multiline
+            numberOfLines={5}
+          />
+
+             {/* Section Description */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
             <Text style={styles.label}>وصف</Text>
             {recordedFilePathe !== '' && !playinge &&  (
@@ -150,14 +209,16 @@ const handleCancelEdit = () => {
               </TouchableOpacity>
             )}
           </View>
-          <TextInput
+            <TextInput
             style={[styles.input, styles.textArea]}
             value={description}
             onChangeText={setDescription}
             placeholder="أدخل وصفًا"
+             placeholderTextColor="#999" 
             multiline
             numberOfLines={5}
           />
+
           <TouchableOpacity 
             style={styles.button} 
             onPress={handleAddOrUpdate}
@@ -167,72 +228,45 @@ const handleCancelEdit = () => {
               {loading ? 'جاري الحفظ...' : (idToUpdate ? 'تعديل' : 'إضافة')}
             </Text>
           </TouchableOpacity>
-          { idToUpdate && (
-           <TouchableOpacity 
+          { (idToUpdate || title.trim() !== '' || ingredient.trim() !== '' || description.trim() !== '') && (
+        <TouchableOpacity 
           style={[styles.button, styles.cancelButton]} 
           onPress={handleCancelEdit}
-          >
-           <Text style={styles.cancelButtonText}>إلغاء</Text>
-             </TouchableOpacity>
-          )}
+  >
+         <Text style={styles.cancelButtonText}>إلغاء</Text>
+          </TouchableOpacity>
+)}
+<Text style={styles.label}>الخصوصية</Text>
+<View style={{ flexDirection: 'row', justifyContent: 'space-around', marginVertical: 10 }}>
+  <TouchableOpacity
+    style={[
+      styles.visibilityButton,
+      visibility === 'private' && styles.visibilityButtonSelected,
+    ]}
+    onPress={() => setVisibility('private')}
+  >
+    <Text style={visibility === 'private' ? styles.visibilityTextSelected : styles.visibilityText}>
+      خاصة
+    </Text>
+  </TouchableOpacity>
+
+  <TouchableOpacity
+    style={[
+      styles.visibilityButton,
+      visibility === 'public' && styles.visibilityButtonSelected,
+    ]}
+    onPress={() => setVisibility('public')}
+  >
+    <Text style={visibility === 'public' ? styles.visibilityTextSelected : styles.visibilityText}>
+      عامة
+    </Text>
+  </TouchableOpacity>
+</View>
+
+
         </View>
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 14,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginVertical: 20,
-    textAlign: 'center',
-  },
-  from: {
-    backgroundColor: '#f8f8f8',
-    padding: 15,
-    borderRadius: 10,
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 5,
-    fontWeight: '500',
-  },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 15,
-  },
-  textArea: {
-    height: 578,
-    textAlignVertical: 'top',
-  },
-  button: {
-    backgroundColor: '#E1B055',
-    padding: 15,
-    borderRadius: 5,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  cancelButton: {
-  backgroundColor: '#ccc',
-  marginTop: 10,
-},
-cancelButtonText: {
-  color: '#333',
-  fontWeight: 'bold',
-  fontSize: 16,
-},
-});

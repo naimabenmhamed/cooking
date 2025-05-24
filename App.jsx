@@ -16,6 +16,7 @@ import Recorde from "./components/Main/Recorde";
 import Chat2p from "./components/Chat/Chat2p";
 import Toast from 'react-native-toast-message';
 import ToNotes from "./components/Main/Notes";
+import AfficherNotes from "./components/Main/AfficherNotes"
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -109,6 +110,7 @@ export default function App() {
          <Stack.Screen name="Recorde" component={Recorde} options={{ headerShown: false }} />
          <Stack.Screen name="Chat2p" component={Chat2p} options={{ headerShown: false }} />
          <Stack.Screen name="Notes" component={ToNotes} options={{ headerShown: false }} />
+         <Stack.Screen name="AfficherNotes" component={AfficherNotes} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />

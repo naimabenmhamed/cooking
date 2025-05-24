@@ -5,7 +5,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
-
+import AfficherNotes from './AfficherNotes'
 export default function ToNotes() {
   const [texts, setTexts] = useState([]);
   const isFocused = useIsFocused();
@@ -66,16 +66,12 @@ export default function ToNotes() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TouchableOpacity
-            onPress={() => navigation.navigate('Add', {
-              id: item.id,
-              title: item.title,
-              description: item.description
-            })}
+            onPress={() => navigation.navigate('AfficherNotes',  { note: item })}
             style={styles.fletlisteStyle}
           >
             <View style={styles.noteView}>
               <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
-              <Text style={styles.noteText} numberOfLines={2}>{item.description}</Text>
+              {/* <Text style={styles.noteText} numberOfLines={2}>{item.description}</Text> */}
               <Text style={styles.noteDate}>{formatDate(item.createdAt)}</Text>
               <TouchableOpacity
                 onPress={() => handleDeleteText(item.id)}
@@ -97,6 +93,7 @@ const styles = StyleSheet.create({
     flex: 1,
     // backgroundColor: '#c9f5d9',
     padding: 10,
+    paddingHorizontal: 10,
     
   },
   noteView: {
@@ -111,12 +108,17 @@ const styles = StyleSheet.create({
     elevation: 4,
     flexDirection: 'row',
     alignItems: 'center', 
-    justifyContent: 'space-between'
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+     width: '100%',
+     marginHorizontal: 0,
   },
+
   noteTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 5,
+    flexShrink: 1
   },
   noteText: {
     fontSize: 14,
@@ -126,6 +128,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'gray',
     marginBottom: 10,
+    position :'absolute',
+    bottom: 10, 
+    left: '50%',      // positionne le coin gauche du texte au milieu
+    transform: [{ translateX: -50 }],
   },
   deleteButton: {
     backgroundColor: '#FBD38D',
