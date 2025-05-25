@@ -118,6 +118,8 @@ export const saveNotes= (route, navigation) => {
      setDescription('');
      setIngredient('');
      Keyboard.dismiss();
+     setImageBase64(null);
+
      
      // Naviguer vers ToNotes et nettoyer l'historique
      navigation.reset({
