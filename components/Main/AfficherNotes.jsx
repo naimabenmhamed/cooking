@@ -1,6 +1,6 @@
 import React,{useState} from 'react'
 import firestore from '@react-native-firebase/firestore'
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, Alert, Keyboard } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, Alert, Keyboard,Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Add from './Add';
 export default function AfficherNotes ({route,navigation}){
@@ -57,6 +57,13 @@ const handleDeleteText = async (id) => {
         </TouchableOpacity>
       )}
       
+        {note.image && (
+  <Image
+    source={{ uri: `data:image/jpeg;base64,${note.image}` }}
+    style={{ width: '100%', height: 200, marginTop: 20, borderRadius: 10 }}
+    resizeMode="cover"
+  />
+)}
 
 
 
@@ -84,7 +91,7 @@ const handleDeleteText = async (id) => {
     >
       <Icon name="trash-outline" size={19} color="#999" />
     </TouchableOpacity>
-  
+     
 
 
     </ScrollView>

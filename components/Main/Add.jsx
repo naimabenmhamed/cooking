@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, Alert, Keyboard } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, Alert, Keyboard, Image} from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
+import { launchImageLibrary } from 'react-native-image-picker';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import { uploadAudio } from './Tranc';
 import { CommonActions } from '@react-navigation/native';
@@ -30,6 +31,10 @@ export default function Add({ navigation, route }) {
     loading,
     ingredient,
     setIngredient,
+    imageBase64,
+    setImageBase64,
+    selectImage
+
   } = saveNotes(route, navigation);
   // États pour l'audio
  
@@ -218,6 +223,20 @@ const handleCancelEdit = () => {
             multiline
             numberOfLines={5}
           />
+
+            <TouchableOpacity onPress={selectImage} style={[styles.button, { marginTop: 10 }]}>
+                <Text style={styles.buttonText}>اختيار صورة</Text>
+            </TouchableOpacity>
+
+          {imageBase64 && (
+          <Image
+            source={{ uri: `data:image/jpeg;base64,${imageBase64}` }}
+            style={{ width: '100%', height: 200, marginTop: 10, borderRadius: 10 }}
+            resizeMode="cover"
+          />
+          )}
+
+
 
           <TouchableOpacity 
             style={styles.button} 
