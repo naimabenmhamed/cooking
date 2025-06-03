@@ -19,19 +19,19 @@ export default function Login({navigation})  {
       <SafeAreaView style={styles.container}>
         {/* zon on blanche avec view */}
         <View style={styles.topsection}>
-          <LottieView source= {require('../../assets/animations/Animation - 1745956545417.json')}  autoPlay  loop 
-          style={{ width:400, height :500}} 
+          <LottieView source= {require('../../assets/animations/Animation - 1748944760221.json')}  autoPlay  loop 
+          style={{ width:244, height :400}} 
           resizeMode="contain"/>
         </View>
         {/* zon orange avec view */}
         <View style={styles.bottomSection}>
-            <TextInput  placeholder="البريد الإلكتروني"  placeholderTextColor="#999"  style={styles.input} keyboardType="email-address"   value={email}
+            <TextInput  placeholder="E-mail"  placeholderTextColor="#999"  style={styles.input} keyboardType="email-address"   value={email}
           onChangeText={setEmail}></TextInput>
-            <TextInput  placeholder="كلمة المرور " placeholderTextColor="#999"  style={styles.input} secureTextEntry={true}  value={password}
+            <TextInput  placeholder="Mot de passe " placeholderTextColor="#999"  style={styles.input} secureTextEntry={true}  value={password}
           onChangeText={setPassword} ></TextInput>
            
             <TouchableOpacity style={styles.roundButton}  onPress={handleLogin}>
-            <Text style={styles.buttonText}>تسجيل الدخول</Text>
+           <Text style={styles.buttonText}>Connexion</Text>
             </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     },
     
   bottomSection: {
-    backgroundColor: '#E1B055', // Couleur dorée/jaune
+    backgroundColor: '#1E90FF', 
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     padding: 20,
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     height: '65%',
   },
   rectangleButton: {
-    backgroundColor: '#FFF5F0', // Teinte très légèrement rosée pour les boutons blancs
+    backgroundColor: '#B0C4DE', // Teinte très légèrement rosée pour les boutons blancs
     borderRadius: 15,
     padding: 15,
     marginVertical: 8,
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   orangeButton: {
-    backgroundColor: '#FF5722', // Couleur orange
+    backgroundColor: '#B0C4DE', // Couleur orange
     borderRadius: 25,
     padding: 15,
     marginVertical: 8,

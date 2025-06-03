@@ -101,36 +101,36 @@ const handleCancelEdit = () => {
   return (
     <View style={styles.container}>
       <ScrollView>
-        <Text style={styles.title}>أضف وصفة جديدة</Text>
+        <Text style={styles.title}>Nouvelle lesson</Text>
         <View style={styles.from}>
           {/* Section Titre */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-            <Text style={styles.label}>عنوان</Text>
+            <Text style={styles.label}>Titre</Text>
             {recordedFilePath !== '' && !playing &&  (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStartPlay}>
-                <Icon name="volume-mute-outline" size={43} color="#999"/>
+                <Icon name="volume-mute-outline" size={43} color="#555"/>
               </TouchableOpacity>
             )}
             {playing &&(
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}} 
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}} 
                 onPress={onStopPlay}>
-                <Icon name="volume-high-outline" size={43} color="#999"/>
+                <Icon name="volume-high-outline" size={43} color="#555"/>
               </TouchableOpacity>
             )}
             {!recording ? (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStartRecord}>
-                <Icon name="mic-outline" size={43} color="#999" />
+                <Icon name="mic-outline" size={43} color="#444" />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={() => onStopRecord(true)}>
-                <Icon name="ellipsis-horizontal-outline" size={43} color="#999" />
+                <Icon name="ellipsis-horizontal-outline" size={43} color="#444" />
               </TouchableOpacity>
             )}
           </View>
@@ -138,38 +138,38 @@ const handleCancelEdit = () => {
             style={styles.input}
             value={title}
             onChangeText={setTitle}
-            placeholder="أدخل عنوانًا"
+            placeholder="Entrer le Titre"
              placeholderTextColor="#999" 
           />
 
           {/* Section ingredient */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-            <Text style={styles.label}>مكونات</Text>
+            <Text style={styles.label}>Leçon</Text>
             {recordedFilePathes !== '' && !playinges &&  (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStartPlayIngredient}>
-                <Icon name="volume-mute-outline" size={43} color="#999"/>
+                <Icon name="volume-mute-outline" size={43} color="#555"/>
               </TouchableOpacity>
             )}
             {playinges && (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}} 
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}} 
                 onPress={onStopPlayIngredient}>
-                <Icon name="volume-high-outline" size={43} color="#999"/>
+                <Icon name="volume-high-outline" size={43} color="#555"/>
               </TouchableOpacity>
             )}
             {!recordinges ?  (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStartRecordIngredient}>
-                <Icon name="mic-outline" size={43} color="#999" />
+                <Icon name="mic-outline" size={43} color="#444" />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStopRecordIngredient}>
-                <Icon name="ellipsis-horizontal-outline" size={43} color="#999" />
+                <Icon name="ellipsis-horizontal-outline" size={43} color="#444" />
               </TouchableOpacity>
             )}
           </View>
@@ -177,7 +177,7 @@ const handleCancelEdit = () => {
             style={[styles.input, styles.textArea]}
             value={ingredient}
             onChangeText={setIngredient}
-            placeholder="أدخل وصفًا"
+            placeholder="Entrer le Leçon"
              placeholderTextColor="#999" 
             multiline
             numberOfLines={5}
@@ -185,32 +185,32 @@ const handleCancelEdit = () => {
 
              {/* Section Description */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-            <Text style={styles.label}>وصف</Text>
+            <Text style={styles.label}>résumé</Text>
             {recordedFilePathe !== '' && !playinge &&  (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStartPlayDescription}>
-                <Icon name="volume-mute-outline" size={43} color="#999"/>
+                <Icon name="volume-mute-outline" size={43} color="#555"/>
               </TouchableOpacity>
             )}
             {playinge && (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}} 
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}} 
                 onPress={onStopPlayDescription}>
-                <Icon name="volume-high-outline" size={43} color="#999"/>
+                <Icon name="volume-high-outline" size={43} color="#555"/>
               </TouchableOpacity>
             )}
             {!recordinge ?  (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStartRecordDescription}>
-                <Icon name="mic-outline" size={43} color="#999" />
+                <Icon name="mic-outline" size={43} color="#444" />
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
-                style={{backgroundColor:"#FBD38D", borderRadius: 20, padding: 4, width: 50, height: 50}}  
+                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
                 onPress={onStopRecordDescription}>
-                <Icon name="ellipsis-horizontal-outline" size={43} color="#999" />
+                <Icon name="ellipsis-horizontal-outline" size={43} color="#444" />
               </TouchableOpacity>
             )}
           </View>
@@ -218,14 +218,14 @@ const handleCancelEdit = () => {
             style={[styles.input, styles.textArea]}
             value={description}
             onChangeText={setDescription}
-            placeholder="أدخل وصفًا"
+            placeholder="Entrer le résumé"
              placeholderTextColor="#999" 
             multiline
             numberOfLines={5}
           />
 
             <TouchableOpacity onPress={selectImage} style={[styles.button, { marginTop: 10 }]}>
-                <Text style={styles.buttonText}>اختيار صورة</Text>
+                <Text style={styles.buttonText}> Choisir la photo </Text>
             </TouchableOpacity>
 
           {imageBase64 && (
@@ -244,7 +244,7 @@ const handleCancelEdit = () => {
             disabled={loading}
           >
             <Text style={styles.buttonText}>
-              {loading ? 'جاري الحفظ...' : (idToUpdate ? 'تعديل' : 'إضافة')}
+              {loading ? 'Enregistrement en cours...' : (idToUpdate ? 'Modifier' : 'Ajouter')}
             </Text>
           </TouchableOpacity>
           { (idToUpdate || title.trim() !== '' || ingredient.trim() !== '' || description.trim() !== '') && (
@@ -252,10 +252,10 @@ const handleCancelEdit = () => {
           style={[styles.button, styles.cancelButton]} 
           onPress={handleCancelEdit}
   >
-         <Text style={styles.cancelButtonText}>إلغاء</Text>
+         <Text style={styles.cancelButtonText}>Annuler</Text>
           </TouchableOpacity>
 )}
-<Text style={styles.label}>الخصوصية</Text>
+<Text style={styles.label}>Confidentialité</Text>
 <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginVertical: 10 }}>
   <TouchableOpacity
     style={[
@@ -265,8 +265,7 @@ const handleCancelEdit = () => {
     onPress={() => setVisibility('private')}
   >
     <Text style={visibility === 'private' ? styles.visibilityTextSelected : styles.visibilityText}>
-      خاصة
-    </Text>
+Privée    </Text>
   </TouchableOpacity>
 
   <TouchableOpacity
@@ -277,7 +276,7 @@ const handleCancelEdit = () => {
     onPress={() => setVisibility('public')}
   >
     <Text style={visibility === 'public' ? styles.visibilityTextSelected : styles.visibilityText}>
-      عامة
+     Publique 
     </Text>
   </TouchableOpacity>
 </View>

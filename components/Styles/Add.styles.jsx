@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
     
   },
   button: {
-    backgroundColor: '#E1B055',
+    backgroundColor: '#1E90FF',
     padding: 15,
     borderRadius: 5,
     alignItems: 'center',
@@ -64,7 +64,7 @@ visibilityButton: {
   backgroundColor: '#eee',
 },
 visibilityButtonSelected: {
-  backgroundColor: '#FBD38D',
+  backgroundColor: '#1E90FF',
   borderColor: '#F6AD55',
 },
 visibilityText: {

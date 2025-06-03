@@ -32,30 +32,33 @@ const handleDeleteText = async (id) => {
       await firestore().collection('notes').doc(note.id).update({
         visibility: 'public',
       });
-      Alert.alert('تم النشر', 'تم نشر الوصفة بنجاح.');
+      Alert.alert('Publication réussie', 'La recette a été publiée avec succès.');
       navigation.goBack();
-    } catch (error) {
-      Alert.alert('خطأ', 'حدث خطأ أثناء النشر.');
+      } catch (error) {
+      Alert.alert('Erreur', 'Une erreur s\'est produite lors de la publication.');
       console.error(error);
+
     }
+
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.label}>العنوان</Text>
-      <Text style={styles.text}>{note.title}</Text>
+    <Text style={styles.label}>Titre</Text>
+    <Text style={styles.text}>{note.title}</Text>
 
-      <Text style={styles.label}>المكونات</Text>
-      <Text style={styles.text}>{note.ingredient || 'لا توجد مكونات'}</Text>
+    <Text style={styles.label}>Ingrédients</Text>
+    <Text style={styles.text}>{note.ingredient || 'Aucun ingrédient'}</Text>
 
-      <Text style={styles.label}>الوصف</Text>
-      <Text style={styles.text}>{note.description || 'لا يوجد وصف'}</Text>
+    <Text style={styles.label}>Description</Text>
+    <Text style={styles.text}>{note.description || 'Aucune description'}</Text>
 
-      {note.visibility !== 'public' && (
-        <TouchableOpacity style={styles.button} onPress={handlePublish}>
-          <Text style={styles.buttonText}>نشر الوصفة</Text>
-        </TouchableOpacity>
-      )}
+    {note.visibility !== 'public' && (
+    <TouchableOpacity style={styles.button} onPress={handlePublish}>
+    <Text style={styles.buttonText}>Publier la recette</Text>
+    </TouchableOpacity>
+  )}
+
       
         {note.image && (
   <Image
@@ -76,7 +79,7 @@ const handleDeleteText = async (id) => {
       })}
       style={styles.button}
       >
-        <Text  style={styles.buttonText}> تعديل</Text>
+     <Text style={styles.buttonText}>Modifier</Text>
       </TouchableOpacity>
       <Text style={styles.noteDate}>
       {note.createdAt?.toDate?.().toLocaleDateString("fr-FR", {

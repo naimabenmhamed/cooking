@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,138 +7,131 @@ import {
   StyleSheet, 
   Image,
   StatusBar,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import AddToChat from './AddToChat';
+import { useNavigation } from '@react-navigation/native';
+
 const ChatList = () => {
-  const [chats, setChats] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
   const currentUser = auth().currentUser;
 
-  useFocusEffect(
-    useCallback(() => {
-      const unsubscribe = firestore()
-        .collection('chats')
-        .where('users', 'array-contains', currentUser.uid)
-        .onSnapshot(async (snapshot) => {
-          const chatData = await Promise.all(snapshot.docs.map(async doc => {
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = firestore()
+      .collection('friends')
+      .where('users', 'array-contains', currentUser.uid)
+      .onSnapshot(async (snapshot) => {
+        const friendsData = await Promise.all(
+          snapshot.docs.map(async (doc) => {
             const data = doc.data();
-            const otherUserId = data.users.find(uid => uid !== currentUser.uid);
-
-            let otherUserInfo = { 
-              displayName: 'Utilisateur inconnu',
-              photoURL: null,
-              status: 'en ligne' 
-            };
-            try {
-              const userDoc = await firestore().collection('users').doc(otherUserId).get();
-              if (userDoc.exists) {
-                otherUserInfo = {
-                  displayName: userDoc.data().displayName || otherUserInfo.displayName,
-                  photoURL: userDoc.data().photoURL,
-                  status: userDoc.data().status || otherUserInfo.status
-                };
-              }
-            } catch (e) {
-              console.log('Erreur en récupérant les infos utilisateur:', e);
+            const friendId = data.users.find(uid => uid !== currentUser.uid);
+            
+            // Récupérer les infos de l'ami
+            const userDoc = await firestore().collection('users').doc(friendId).get();
+            if (userDoc.exists) {
+              return {
+                id: friendId,
+                name: userDoc.data().nom || userDoc.data().displayName || 'Ami',
+                avatar: userDoc.data().photoURL || null,
+                isOnline: userDoc.data().isOnline || false
+              };
             }
+            return null;
+          })
+        );
 
-            return {
-              id: doc.id,
-              otherUserId,
-              otherUserName: otherUserInfo.displayName,
-              otherUserAvatar: otherUserInfo.photoURL,
-              otherUserStatus: otherUserInfo.status,
-              lastMessage: data.lastMessage || 'Pas encore de messages',
-              timestamp: data.lastMessageTimestamp?.toDate() || new Date()
-            };
-          }));
+        setFriends(friendsData.filter(friend => friend !== null));
+        setLoading(false);
+      }, error => {
+        console.error("Error fetching friends:", error);
+        setLoading(false);
+      });
 
-          // Trier les chats par date du dernier message (du plus récent au plus ancien)
-          chatData.sort((a, b) => b.timestamp - a.timestamp);
-          setChats(chatData);
-        });
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
 
-      return () => unsubscribe();
-    }, [currentUser.uid])
-  );
-
-  const goToChat = (chatId, otherUserId, otherUserName, otherUserAvatar) => {
+  const startChat = (friend) => {
     navigation.navigate('Chat2p', {
-      chatId,
-      otherUserId,
-      otherUserName,
-      otherUserAvatar
+      recipientId: friend.id,
+      recipientName: friend.name,
+      otherUserAvatar: friend.avatar
     });
   };
 
-  const formatTime = (date) => {
-    const now = new Date();
-    const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-    
-    if (diffInDays === 0) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffInDays === 1) {
-      return 'Hier';
-    } else if (diffInDays < 7) {
-      return date.toLocaleDateString([], { weekday: 'short' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-  };
-
-  const renderItem = ({ item }) => (
+  const renderFriend = ({ item }) => (
     <TouchableOpacity
-      style={styles.chatItem}
-      onPress={() => goToChat(item.id, item.otherUserId, item.otherUserName, item.otherUserAvatar)}
+      style={styles.friendItem}
+      onPress={() => startChat(item)}
     >
       <View style={styles.avatarContainer}>
-        {item.otherUserAvatar ? (
-          <Image source={{ uri: item.otherUserAvatar }} style={styles.avatar} />
+        {item.avatar ? (
+          <Image source={{ uri: item.avatar }} style={styles.avatar} />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
             <Text style={styles.avatarText}>
-              {item.otherUserName.charAt(0).toUpperCase()}
+              {item.name.charAt(0).toUpperCase()}
             </Text>
           </View>
         )}
-        <View style={item.otherUserStatus === 'en ligne' ? styles.onlineBadge : styles.offlineBadge} />
+        <View style={item.isOnline ? styles.onlineBadge : styles.offlineBadge} />
       </View>
       
-      <View style={styles.chatContent}>
-        <View style={styles.chatHeader}>
-          <Text style={styles.name} numberOfLines={1}>{item.otherUserName}</Text>
-          <Text style={styles.time}>{formatTime(item.timestamp)}</Text>
-        </View>
-        <Text style={styles.lastMessage} numberOfLines={1}>{item.lastMessage}</Text>
+      <View style={styles.friendInfo}>
+        <Text style={styles.friendName}>{item.name}</Text>
+        <Text style={styles.friendStatus}>
+          {item.isOnline ? 'En ligne' : 'Hors ligne'}
+        </Text>
       </View>
+      
+      <Icon name="chatbox-ellipses-outline" size={24} color="#E1B055" />
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Text>Chargement des amis...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
+        <Text style={styles.headerTitle}>Mes Amis</Text>
+        <Text style={styles.subtitle}>
+          {friends.length} ami{friends.length !== 1 ? 's' : ''}
+        </Text>
       </View>
       
-      <FlatList
-        data={chats}
-        keyExtractor={item => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={chats.length === 0 && styles.emptyContainer}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Icon name="chatbubbles-outline" size={60} color="#ccc" />
-            <Text style={styles.emptyText}>Aucune conversation</Text>
-          </View>
-        }
-      />
-      <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('AddToChat')}>
-        <Icon name="add-outline" size={30} color="#999" />
+     <FlatList
+  data={friends}
+  renderItem={renderFriend}
+  keyExtractor={item => item.id}
+  contentContainerStyle={friends.length === 0 ? styles.emptyContainer : null}
+  ListEmptyComponent={
+    <View style={styles.emptyContainer}>
+      <Icon name="people-outline" size={60} color="#ccc" />
+      <Text style={styles.emptyText}>Aucun ami trouvé</Text>
+      <Text style={styles.emptySubText}>
+        Ajoutez des amis pour commencer à chatter
+      </Text>
+    </View>
+  }
+/>
+      
+      <TouchableOpacity 
+        style={styles.addButton}
+        onPress={() => navigation.navigate('AddToChat')}
+      >
+        <Icon name="person-add-outline" size={30} color="white" />
       </TouchableOpacity>
     </View>
   );
@@ -150,38 +143,36 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   header: {
-    padding: 15,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
-    backgroundColor: '#fff',
-    ...Platform.select({
-      android: {
-        elevation: 2,
-      },
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 1,
-      },
-    }),
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  chatItem: {
+  subtitle: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 4,
+  },
+  friendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#f5f5f5',
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 15,
+    marginRight: 12,
   },
   avatar: {
     width: 50,
@@ -189,7 +180,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   avatarPlaceholder: {
-    backgroundColor: '#2196F3',
+    backgroundColor: '#E1B055',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -220,25 +211,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#fff',
   },
-  chatContent: {
+  friendInfo: {
     flex: 1,
   },
-  chatHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 5,
-  },
-  name: {
+  friendName: {
     fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 10,
+    fontWeight: '600',
   },
-  time: {
-    fontSize: 12,
-    color: '#888',
-  },
-  lastMessage: {
+  friendStatus: {
     fontSize: 14,
     color: '#666',
   },
@@ -249,24 +229,25 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   emptyText: {
-    marginTop: 15,
+    marginTop: 16,
     fontSize: 16,
     color: '#888',
   },
-   chatButton: {
+  emptySubText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#aaa',
+  },
+  addButton: {
     position: 'absolute',
     right: 20,
     bottom: 20,
-    backgroundColor: '#FBD38D',
+    backgroundColor: '#1E90FF',
     width: 60,
     height: 60,
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
     elevation: 5,
   },
 });

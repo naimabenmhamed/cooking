@@ -13,7 +13,7 @@ const [nom, setNom] = useState('');
 
   const handleSignup = async () => {
     if (password.length < 6) {
-      Alert.alert('خطأ', 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل');
+      Alert.alert('Erreur', 'Le mot de passe doit comporter au moins 6 caractères');
       return;
     }
     try {
@@ -44,7 +44,7 @@ const [nom, setNom] = useState('');
       {/* Zone blanche supérieure */}
       <View style={styles.topSection}>
         <LottieView 
-          source={require('../../assets/animations/Animation - 1745940456888.json')}
+          source={require('../../assets/animations/Animation - 1748192301295.json')}
           autoPlay
           loop
           style={{ width: 280, height: 280 }}
@@ -55,7 +55,7 @@ const [nom, setNom] = useState('');
       {/* Zone orange inférieure */}
       <View style={styles.bottomSection}>
         <TextInput
-  placeholder="الاسم"
+  placeholder="Nom"
   placeholderTextColor="#999"
   style={styles.input}
   value={nom}
@@ -63,7 +63,7 @@ const [nom, setNom] = useState('');
 />
 
         <TextInput
-          placeholder="البريد الإلكتروني"
+          placeholder="E-mail"
           placeholderTextColor="#999"
           style={styles.input}
           keyboardType="email-address"
@@ -72,7 +72,7 @@ const [nom, setNom] = useState('');
         />
         
         <TextInput
-          placeholder="كلمة المرور"
+          placeholder="Mot de passe"
           placeholderTextColor="#999"
           style={styles.input}
           secureTextEntry
@@ -82,14 +82,14 @@ const [nom, setNom] = useState('');
         />
         
         <TouchableOpacity style={styles.roundButton} onPress={handleSignup}  >
-          <Text style={styles.buttonText}>تسجيل</Text>
+          <Text style={styles.buttonText}>inscription</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.orangeButton}
           onPress={() => navigation.navigate('Login')}
         >
-          <Text style={styles.buttonText}>تسجيل الدخول</Text>
+          <Text style={styles.buttonText}>Connexion</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -111,7 +111,7 @@ const [nom, setNom] = useState('');
       alignItems: 'center',
     },
     bottomSection: {
-      backgroundColor: '#E1B055', // Couleur dorée/jaune
+      backgroundColor: '#1E90FF', 
       borderTopLeftRadius: 30,
       borderTopRightRadius: 30,
       padding: 20,
@@ -120,7 +120,7 @@ const [nom, setNom] = useState('');
       height: '65%',
     },
     rectangleButton: {
-      backgroundColor: '#FFF5F0', // Teinte très légèrement rosée pour les boutons blancs
+      backgroundColor: '#B0C4DE', // Teinte très légèrement rosée pour les boutons blancs
       borderRadius: 15,
       padding: 15,
       marginVertical: 8,
@@ -152,7 +152,7 @@ const [nom, setNom] = useState('');
       height: 50,
     },
     orangeButton: {
-      backgroundColor: '#FF5722', // Couleur orange
+      backgroundColor: '#B0C4DE', // Couleur orange
       borderRadius: 25,
       padding: 15,
       marginVertical: 8,

@@ -11,7 +11,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   profileIconContainer: {
-    backgroundColor: '#FBD38D',
+    backgroundColor: '#1E90FF',
     width: 80,
     height: 80,
     borderRadius: 40,
@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 3,
-    borderBottomColor: '#FBD38D',
+    borderBottomColor: '#1E90FF',
     
   },
   content: {
@@ -67,13 +67,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 20,
-    backgroundColor: '#FBD38D',
+    backgroundColor: '#1E90FF',
     width: 60,
     height: 60,
     borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#555',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 3,
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     height: 30,
     width: 60,
     borderRadius: 20,
-    backgroundColor: '#FBD38D',
+    backgroundColor: '#1E90FF',
     justifyContent: 'center',
     alignItems: 'center',
   },

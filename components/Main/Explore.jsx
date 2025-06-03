@@ -46,7 +46,7 @@ useEffect(() => {
       {/* Section supérieure avec photo et nom */}
       <View style={styles.profileHeader}>
         <View style={styles.profileIconContainer}>
-          <Icon name="person" size={50} color="#999" />
+          <Icon name="person" size={50} color="#555" />
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={styles.userName}>{nom}</Text>
@@ -63,7 +63,7 @@ useEffect(() => {
           style={[styles.tabButton, activeTab === 0 && styles.activeTab]}
           onPress={() => setActiveTab(0)}
         >
-          <Icon name="grid" size={24} color={activeTab === 0 ? "#FBD38D" : "#7f8c8d"} />
+          <Icon name="grid" size={24} color={activeTab === 0 ? "#1E90FF" : "#7f8c8d"} />
           <Text style={styles.tabLabel}>Home</Text>
         </TouchableOpacity>
 
@@ -71,7 +71,7 @@ useEffect(() => {
           style={[styles.tabButton, activeTab === 1 && styles.activeTab]}
           onPress={() => setActiveTab(1)}
         >
-          <Icon name="person" size={24} color={activeTab === 1 ? "#FBD38D" : "#7f8c8d"} />
+          <Icon name="person" size={24} color={activeTab === 1 ? "#1E90FF" : "#7f8c8d"} />
           <Text style={styles.tabLabel}>Profil</Text>
         </TouchableOpacity>
       </View>
@@ -84,7 +84,7 @@ useEffect(() => {
 
       {/* Bouton de chat */}
       <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('ChatListe')}>
-        <Icon name="chatbox" size={30} color="#999" />
+        <Icon name="chatbox" size={30} color="#777" />
       </TouchableOpacity>
        {/* <Button title='hi' onPress={()=> navigation.navigate('Recorde')} /> */}
       {/* // Le composant de dialogue */}

@@ -4,15 +4,16 @@ import {
   Text, 
   TextInput, 
   TouchableOpacity, 
-  FlatList, 
+  FlatList,
   StyleSheet, 
+  Alert,
   KeyboardAvoidingView,
   Platform 
 } from 'react-native';
 import Firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
-import ChatList from './ChatListe';
+
 const Chat2p = ({ route , navigation }) => {
   const { recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
@@ -20,6 +21,7 @@ const Chat2p = ({ route , navigation }) => {
   const currentUser = auth().currentUser;
   const flatListRef = useRef(null);
 
+  // Fonction pour générer l'ID du chat avec les deux UIDs triés
   const getChatId = () => {
     const ids = [currentUser.uid, recipientId].sort();
     return `chat_${ids.join('_')}`;
@@ -27,52 +29,58 @@ const Chat2p = ({ route , navigation }) => {
 
   const chatId = getChatId();
 
+  // Initialise le chat si n'existe pas encore
+// In your initializeChat function:
 const initializeChat = async () => {
-    try {
-      const chatRef = Firestore().collection('chats').doc(chatId);
-      const chatDoc = await chatRef.get();
+  try {
+    const participants = [currentUser.uid, recipientId].sort();
+    const chatRef = Firestore().collection('chats').doc(chatId);
+    
+    await chatRef.set({
+      participants: participants,
+      participantNames: {
+        [participants[0]]: participants[0] === currentUser.uid 
+          ? (currentUser.displayName || 'User') 
+          : recipientName,
+        [participants[1]]: participants[1] === currentUser.uid 
+          ? (currentUser.displayName || 'User') 
+          : recipientName
+      },
+      createdAt: Firestore.FieldValue.serverTimestamp(),
+      updatedAt: Firestore.FieldValue.serverTimestamp(),
+      lastMessage: "",
+      lastMessageSender: ""
+    }, { merge: true }); // Utilisez merge: true pour éviter d'écraser le document s'il existe déjà
 
-      if (!chatDoc.exists) {
-        await chatRef.set({
-          
-          participants: [currentUser.uid, recipientId],
-          participantNames: {
-            [currentUser.uid]: currentUser.displayName || 'User',
-            [recipientId]: recipientName
-          },
-          createdAt: Firestore.FieldValue.serverTimestamp(),
-          updatedAt: Firestore.FieldValue.serverTimestamp(),
-          lastMessage: "",
-          lastMessageSender: ""
-        });
-      }
-    } catch (error) {
-      console.error("Chat initialization error:", error);
-      Alert.alert("Error", "Could not initialize chat");
-    }
-  };
-  const markMessagesAsRead = async () => {
-  const messagesRef = Firestore()
-    .collection('chats')
-    .doc(chatId)
-    .collection('messages');
-
-  const snapshot = await messagesRef
-    .where('readBy', 'not-in', [currentUser.uid]) // messages non encore lus
-    .get();
-
-  const batch = Firestore().batch();
-
-  snapshot.forEach((doc) => {
-    batch.update(doc.ref, {
-      readBy: Firestore.FieldValue.arrayUnion(currentUser.uid)
-    });
-  });
-
-  await batch.commit();
+  } catch (error) {
+    console.error("Chat initialization error:", error);
+    Alert.alert("Error", "Could not initialize chat");
+  }
 };
 
+  // Marquer les messages non lus comme lus
+  const markMessagesAsRead = async () => {
+    const messagesRef = Firestore()
+      .collection('chats')
+      .doc(chatId)
+      .collection('messages');
 
+    const snapshot = await messagesRef
+      .where('readBy', 'not-in', [currentUser.uid])
+      .get();
+
+    const batch = Firestore().batch();
+
+    snapshot.forEach((doc) => {
+      batch.update(doc.ref, {
+        readBy: Firestore.FieldValue.arrayUnion(currentUser.uid)
+      });
+    });
+
+    await batch.commit();
+  };
+
+  // Configurer le listener sur les messages
  const setupChatListener = () => {
   return Firestore()
     .collection('chats')
@@ -80,41 +88,43 @@ const initializeChat = async () => {
     .collection('messages')
     .orderBy('createdAt', 'asc')
     .onSnapshot(
-      async (snapshot) => { // ✅ marquer cette fonction comme async
-        const messages = [];
+      (snapshot) => {
+        const msgs = [];
         snapshot.forEach((doc) => {
-          messages.push({
+          msgs.push({
             id: doc.id,
             ...doc.data()
           });
         });
-        setMessages(messages);
-
-        await markMessagesAsRead(); // ✅ maintenant c'est autorisé
+        setMessages(msgs);
       },
       (error) => {
         console.error("Message listener error:", error);
-        Alert.alert("Erreur", "Impossible de charger les messages");
+        if (error.code === 'permission-denied') {
+          Alert.alert("Permission Error", "You don't have permission to view this chat");
+        } else {
+          Alert.alert("Error", "Failed to load messages");
+        }
       }
     );
 };
 
+  // État de la disponibilité de l'autre utilisateur
   const [isRecipientOnline, setIsRecipientOnline] = useState(false);
 
-useEffect(() => {
-  const unsubscribe = Firestore()
-    .collection('users')
-    .doc(recipientId)
-    .onSnapshot((doc) => {
-      if (doc.exists) {
-        const data = doc.data();
-        setIsRecipientOnline(data.isOnline || false);
-      }
-    });
+  useEffect(() => {
+    const unsubscribe = Firestore()
+      .collection('users')
+      .doc(recipientId)
+      .onSnapshot((doc) => {
+        if (doc.exists) {
+          const data = doc.data();
+          setIsRecipientOnline(data.isOnline || false);
+        }
+      });
 
-  return () => unsubscribe();
-}, [recipientId]);
-
+    return () => unsubscribe();
+  }, [recipientId]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -134,21 +144,27 @@ useEffect(() => {
     };
   }, [currentUser, chatId]);
 
- const sendMessage = async () => {
+  // Fonction pour envoyer un message
+// In your sendMessage function:
+const sendMessage = async () => {
   if (!messageText.trim() || !currentUser) return;
 
   try {
-    const db = Firestore();
-    const chatRef = db.collection('chats').doc(chatId);
+    const chatRef = Firestore().collection('chats').doc(chatId);
     
-    // Vérifier si le chat existe, sinon le créer
+    // Check if chat exists
     const chatDoc = await chatRef.get();
     if (!chatDoc.exists) {
+      const participants = [currentUser.uid, recipientId].sort();
       await chatRef.set({
-        participants: [currentUser.uid, recipientId],
+        participants: participants,
         participantNames: {
-          [currentUser.uid]: currentUser.displayName || 'Moi',
-          [recipientId]: recipientName
+          [participants[0]]: participants[0] === currentUser.uid 
+            ? (currentUser.displayName || 'User') 
+            : recipientName,
+          [participants[1]]: participants[1] === currentUser.uid 
+            ? (currentUser.displayName || 'User') 
+            : recipientName
         },
         createdAt: Firestore.FieldValue.serverTimestamp(),
         updatedAt: Firestore.FieldValue.serverTimestamp(),
@@ -157,16 +173,16 @@ useEffect(() => {
       });
     }
 
-    // Envoyer le message
+    // Add message
     await chatRef.collection('messages').add({
       text: messageText,
       senderId: currentUser.uid,
       createdAt: Firestore.FieldValue.serverTimestamp(),
-       isRead: false, 
-        readBy: [currentUser.uid],
+      isRead: false,
+      readBy: [currentUser.uid]
     });
 
-    // Mettre à jour le chat
+    // Update chat
     await chatRef.update({
       lastMessage: messageText,
       lastMessageSender: currentUser.uid,
@@ -174,24 +190,22 @@ useEffect(() => {
     });
 
     setMessageText('');
-    navigation.navigate('ChatList');
   } catch (error) {
-    // console.error("Send message error:", error);
+    console.error("Send message error:", error);
     Alert.alert("Erreur", "Impossible d'envoyer le message");
   }
 };
 
+  // Rendu d'un message dans la liste
   const renderMessage = ({ item }) => {
     const isCurrentUser = item.senderId === currentUser?.uid;
     const messageDate = item.createdAt?.toDate() || new Date();
-    
+
     return (
       <View style={[
         styles.messageContainer,
         isCurrentUser ? styles.currentUserMessage : styles.otherUserMessage
       ]}>
-        
-  
         <Text style={isCurrentUser ? styles.currentUserText : styles.otherUserText}>
           {item.text}
         </Text>
@@ -202,28 +216,29 @@ useEffect(() => {
           {messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
         <Text style={styles.statusText}>
-  {item.senderId === currentUser.uid ? (
-    item.readBy?.length > 1 ? <Icon name="checkmark-done-outline"></Icon> : <Icon name="checkmark-outline"></Icon>
-  ) : null}
-</Text>
-
+          {isCurrentUser ? (
+            item.readBy?.length > 1 
+              ? <Icon name="checkmark-done-outline" /> 
+              : <Icon name="checkmark-outline" />
+          ) : null}
+        </Text>
       </View>
     );
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'Android' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'android' ? 'padding' : 'height'}
       style={styles.container}
       keyboardVerticalOffset={90}
     >
       <View style={styles.header}>
         <Text style={styles.headerText}>Discussion avec {recipientName}</Text>
         <Text style={styles.statusText}>
-    {isRecipientOnline ?  'en ligne': 'pas en ligne'}
-  </Text>
+          {isRecipientOnline ?  'en ligne' : 'pas en ligne'}
+        </Text>
       </View>
-      
+
       <FlatList
         ref={flatListRef}
         data={messages}
@@ -232,7 +247,7 @@ useEffect(() => {
         contentContainerStyle={styles.messagesList}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
-      
+
       <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}
@@ -246,8 +261,7 @@ useEffect(() => {
           onPress={sendMessage}
           disabled={!messageText.trim()}
         >
-          {/* <Text style={styles.sendButtonText}>Envoyer</Text> */}
-        <Icon  name="send-outline" style={styles.sendButtonText}  size={23}/>
+          <Icon name="send-outline" style={styles.sendButtonText} size={23} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -262,6 +276,9 @@ const styles = StyleSheet.create({
   header: {
     padding: 16,
     backgroundColor: '#E1B055',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   headerText: {
     color: 'white',
@@ -328,16 +345,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   statusText: {
-  color: 'white',
-  fontSize: 14,
-  fontStyle: 'italic',
-  marginTop: 4,
-},
-
+    color: 'white',
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
   sendButtonText: {
     color: 'white',
     fontWeight: 'bold',
   },
 });
 
-export default Chat2p;  
+export default Chat2p;

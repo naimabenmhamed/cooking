@@ -49,9 +49,9 @@ switch (route.name){
       },
       
       tabBarActiveTintColor: '#000',
-        tabBarInactiveTintColor: '#888',
+        tabBarInactiveTintColor: '#555',
         tabBarStyle: {
-          backgroundColor: '#FBD38D',
+          backgroundColor: '#1E90FF',
           height: 60,
           borderTopLeftRadius: 10,
          
@@ -90,7 +90,7 @@ export default function App() {
       <Stack.Navigator
         initialRouteName={user ? "Home" : "CreatAccont"}
         screenOptions={{
-          headerStyle: { backgroundColor: '#E1B055' },
+          headerStyle: { backgroundColor: '#1E90FF' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
         }}
