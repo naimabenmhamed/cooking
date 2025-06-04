@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -50 }],
   },
   deleteButton: {
-    backgroundColor: '#FBD38D',
+    backgroundColor: '#E0FFFF',
     padding: 5,
     borderRadius: 15,
     alignItems: 'center',

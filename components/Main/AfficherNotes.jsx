@@ -88,6 +88,27 @@ const handleDeleteText = async (id) => {
         year: "numeric",
       }) ?? ''}
     </Text>
+     <TouchableOpacity
+      
+      style={styles.button}
+      >
+     <Text style={styles.buttonText}>PDF</Text>
+      </TouchableOpacity>
+
+       <TouchableOpacity
+      
+      style={styles.button}
+      >
+     <Text style={styles.buttonText}>ZIP</Text>
+      </TouchableOpacity>
+
+         <TouchableOpacity
+      
+      style={styles.button}
+      >
+     <Text style={styles.buttonText}>Resumer</Text>
+      </TouchableOpacity>
+
     <TouchableOpacity
       onPress={() => handleDeleteText(note.id)}
       style={styles.deleteButton}
@@ -159,7 +180,7 @@ const styles = StyleSheet.create({
     transform: [{ translateX: -50 }],
   },
   deleteButton: {
-    backgroundColor: '#FBD38D',
+    backgroundColor: '#E0FFFF',
     padding: 5,
     borderRadius: 15,
     alignItems: 'center',
@@ -176,7 +197,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 30,
-    backgroundColor: '#F6AD55',
+    backgroundColor: '#1E90FF',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
