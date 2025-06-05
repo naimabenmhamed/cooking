@@ -287,14 +287,37 @@ const Chat2p = ({ route , navigation }) => {
   };
 
   // Fonction pour afficher les détails d'une note partagée
-  const showSharedNoteDetails = (sharedNote) => {
-    Alert.alert(
-      sharedNote.title,
-      `${sharedNote.description}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
-      [{ text: "Fermer", style: "cancel" }]
-    );
-  };
+const showSharedNoteDetails = (sharedNote) => {
+  if (!sharedNote) return;
 
+  // 1. Affiche d'abord l'alerte rapide
+  Alert.alert(
+    sharedNote.title,
+    `${sharedNote.description}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
+    [
+      { 
+        text: "Voir détails", 
+        onPress: () => {
+          // 2. Navigation vers l'écran détaillé quand l'utilisateur clique
+          navigation.navigate('AfficherNotes', { 
+            note: {
+              id: sharedNote.id,
+              title: sharedNote.title,
+              description: sharedNote.description,
+              ingredient: sharedNote.ingredient || '',
+              createdAt: sharedNote.createdAt,
+              visibility: sharedNote.visibility,
+              image: sharedNote.image || null,
+              // Ajoutez d'autres champs si nécessaire
+            }
+          });
+        } 
+      },
+      { text: "Fermer", style: "cancel" }
+    ],
+    { cancelable: true }
+  );
+};
   // Message rendu avec style "WhatsApp-like" incluant les notes partagées
   const renderMessage = ({ item }) => {
     const isCurrentUser = item.senderId === currentUser?.uid;
