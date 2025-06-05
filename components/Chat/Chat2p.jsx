@@ -33,30 +33,34 @@ const Chat2p = ({ route , navigation }) => {
 // In your initializeChat function:
 const initializeChat = async () => {
   try {
-    const participants = [currentUser.uid, recipientId].sort();
     const chatRef = Firestore().collection('chats').doc(chatId);
-    
-    await chatRef.set({
-      participants: participants,
-      participantNames: {
-        [participants[0]]: participants[0] === currentUser.uid 
-          ? (currentUser.displayName || 'User') 
-          : recipientName,
-        [participants[1]]: participants[1] === currentUser.uid 
-          ? (currentUser.displayName || 'User') 
-          : recipientName
-      },
-      createdAt: Firestore.FieldValue.serverTimestamp(),
-      updatedAt: Firestore.FieldValue.serverTimestamp(),
-      lastMessage: "",
-      lastMessageSender: ""
-    }, { merge: true }); // Utilisez merge: true pour éviter d'écraser le document s'il existe déjà
+    const chatDoc = await chatRef.get();
 
+    if (!chatDoc.exists) {
+      const participants = [currentUser.uid, recipientId].sort();
+
+      await chatRef.set({
+        participants: participants,
+        participantNames: {
+          [participants[0]]: participants[0] === currentUser.uid 
+            ? (currentUser.displayName || 'User') 
+            : recipientName,
+          [participants[1]]: participants[1] === currentUser.uid 
+            ? (currentUser.displayName || 'User') 
+            : recipientName
+        },
+        createdAt: Firestore.FieldValue.serverTimestamp(),
+        updatedAt: Firestore.FieldValue.serverTimestamp(),
+        lastMessage: "",
+        lastMessageSender: ""
+      });
+    }
   } catch (error) {
     console.error("Chat initialization error:", error);
     Alert.alert("Error", "Could not initialize chat");
   }
 };
+
 
   // Marquer les messages non lus comme lus
   const markMessagesAsRead = async () => {

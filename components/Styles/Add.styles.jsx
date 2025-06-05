@@ -56,23 +56,24 @@ cancelButtonText: {
   fontSize: 16,
 },
 visibilityButton: {
-  paddingVertical: 8,
-  paddingHorizontal: 20,
-  borderRadius: 20,
+  flex: 1,
   borderWidth: 1,
-  borderColor: '#ccc',
-  backgroundColor: '#eee',
+  borderColor: '#1E90FF',
+  padding: 10,
+  borderRadius: 10,
+  alignItems: 'center',
+  marginHorizontal: 5,
+  backgroundColor: '#fff',
 },
 visibilityButtonSelected: {
   backgroundColor: '#1E90FF',
-  borderColor: '#F6AD55',
 },
 visibilityText: {
-  color: '#555',
-  fontWeight: 'normal',
+    color: '#1E90FF',
+  fontWeight: 'bold',
 },
 visibilityTextSelected: {
-  color: '#000',
+   color: '#fff',
   fontWeight: 'bold',
 },
 

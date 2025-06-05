@@ -26,7 +26,7 @@ export default function ToNotes() {
           const userTexts = querySnapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id
-          })).sort((a, b) => b.createdAt - a.createdAt);
+          })).filter(note => note.visibility === 'private').sort((a, b) => b.createdAt - a.createdAt);
           setTexts(userTexts);
         } catch (error) {
           console.error("Erreur lors de la récupération :", error);
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     marginVertical: -9, 
     padding: 45,
     borderRadius: 10,
-    shadowColor: '#FBD38D',
+    shadowColor: '#00FFFF',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     elevation: 4,

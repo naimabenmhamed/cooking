@@ -33,7 +33,8 @@ export default function Add({ navigation, route }) {
     setIngredient,
     imageBase64,
     setImageBase64,
-    selectImage
+    selectImage,  visibility,            // <= ajoute ceci
+  setVisibility 
 
   } = saveNotes(route, navigation);
   // États pour l'audio
@@ -85,8 +86,7 @@ export default function Add({ navigation, route }) {
   setPlayinges,
   transcribedTextes, 
   setTranscribedTextes,
-  visibility,            // <= ajoute ceci
-  setVisibility 
+ 
   } = Audio(route, navigation);
 
 const handleCancelEdit = () => {
@@ -184,45 +184,7 @@ const handleCancelEdit = () => {
           />
 
              {/* Section Description */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'}}>
-            <Text style={styles.label}>résumé</Text>
-            {recordedFilePathe !== '' && !playinge &&  (
-              <TouchableOpacity 
-                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={onStartPlayDescription}>
-                <Icon name="volume-mute-outline" size={43} color="#555"/>
-              </TouchableOpacity>
-            )}
-            {playinge && (
-              <TouchableOpacity 
-                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}} 
-                onPress={onStopPlayDescription}>
-                <Icon name="volume-high-outline" size={43} color="#555"/>
-              </TouchableOpacity>
-            )}
-            {!recordinge ?  (
-              <TouchableOpacity 
-                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={onStartRecordDescription}>
-                <Icon name="mic-outline" size={43} color="#444" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={{backgroundColor:"#1E90FF", borderRadius: 20, padding: 4, width: 50, height: 50}}  
-                onPress={onStopRecordDescription}>
-                <Icon name="ellipsis-horizontal-outline" size={43} color="#444" />
-              </TouchableOpacity>
-            )}
-          </View>
-            <TextInput
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Entrer le résumé"
-             placeholderTextColor="#999" 
-            multiline
-            numberOfLines={5}
-          />
+         
 
             <TouchableOpacity onPress={selectImage} style={[styles.button, { marginTop: 10 }]}>
                 <Text style={styles.buttonText}> Choisir la photo </Text>
@@ -238,25 +200,10 @@ const handleCancelEdit = () => {
 
 
 
-          <TouchableOpacity 
-            style={styles.button} 
-            onPress={handleAddOrUpdate}
-            disabled={loading}
-          >
-            <Text style={styles.buttonText}>
-              {loading ? 'Enregistrement en cours...' : (idToUpdate ? 'Modifier' : 'Ajouter')}
-            </Text>
-          </TouchableOpacity>
-          { (idToUpdate || title.trim() !== '' || ingredient.trim() !== '' || description.trim() !== '') && (
-        <TouchableOpacity 
-          style={[styles.button, styles.cancelButton]} 
-          onPress={handleCancelEdit}
-  >
-         <Text style={styles.cancelButtonText}>Annuler</Text>
-          </TouchableOpacity>
-)}
+          
+         
 <Text style={styles.label}>Confidentialité</Text>
-<View style={{ flexDirection: 'row', justifyContent: 'space-around', marginVertical: 10 }}>
+<View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
   <TouchableOpacity
     style={[
       styles.visibilityButton,
@@ -264,8 +211,14 @@ const handleCancelEdit = () => {
     ]}
     onPress={() => setVisibility('private')}
   >
-    <Text style={visibility === 'private' ? styles.visibilityTextSelected : styles.visibilityText}>
-Privée    </Text>
+    <Text
+      style={[
+        styles.visibilityText,
+        visibility === 'private' && styles.visibilityTextSelected,
+      ]}
+    >
+      Privée
+    </Text>
   </TouchableOpacity>
 
   <TouchableOpacity
@@ -275,11 +228,34 @@ Privée    </Text>
     ]}
     onPress={() => setVisibility('public')}
   >
-    <Text style={visibility === 'public' ? styles.visibilityTextSelected : styles.visibilityText}>
-     Publique 
+    <Text
+      style={[
+        styles.visibilityText,
+        visibility === 'public' && styles.visibilityTextSelected,
+      ]}
+    >
+      Publique
     </Text>
   </TouchableOpacity>
 </View>
+<TouchableOpacity 
+            style={styles.button} 
+            onPress={handleAddOrUpdate}
+            disabled={loading}
+          >
+            <Text style={styles.buttonText}>
+              {loading ? 'Enregistrement en cours...' : (idToUpdate ? 'Modifier' : 'Ajouter')}
+            </Text>
+          </TouchableOpacity>
+
+{ (idToUpdate || title.trim() !== '' || ingredient.trim() !== '' || description.trim() !== '') && (
+        <TouchableOpacity 
+          style={[styles.button, styles.cancelButton]} 
+          onPress={handleCancelEdit}
+  >
+         <Text style={styles.cancelButtonText}>Annuler</Text>
+          </TouchableOpacity>
+)}
 
 
         </View>

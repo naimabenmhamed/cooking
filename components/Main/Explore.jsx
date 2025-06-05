@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SafeAreaView, View, StyleSheet, Text, TouchableOpacity, Button } from 'react-native';
+import { SafeAreaView, View, StyleSheet, Text, TouchableOpacity, Button,Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
@@ -9,15 +9,63 @@ import styles from '../Styles/Explore.styles';
 import Toast from 'react-native-toast-message';
 import ModifierNomComponent from './ModifierN';
 import ChatList from '../Chat/ChatListe';
+import {launchImageLibrary} from 'react-native-image-picker';
 import useNomUtilisateur from '../hooks/Nomutillisateur'
 import Recorde from './Recorde'
 export default function Explore({ navigation }) {
   const [activeTab, setActiveTab] = useState(0);
   // const [nom, setNom] = useState('');
   const [showDialog, setShowDialog] = useState(false);
+  const [profileImage, setProfileImage] = useState(null);
 
 const { nom, setNom, userId } = useNomUtilisateur(); // ✅ AVEC setNom
+ 
+const choisirImageProfil = async () => {
+  const result = await launchImageLibrary({
+    mediaType: 'photo',
+    includeBase64: true,
+  });
 
+  if (result.didCancel) return;
+  if (result.errorCode) {
+    console.log('Erreur image:', result.errorMessage);
+    return;
+  }
+
+  if (result.assets && result.assets.length > 0) {
+    const image = result.assets[0];
+    setProfileImage(image.uri); // Pour affichage local
+
+    // Sauvegarde dans Firestore
+    const currentUser = auth().currentUser;
+    if (currentUser) {
+      await firestore().collection('users').doc(currentUser.uid).update({
+        photoProfil: image.base64, // stocke la base64 dans Firestore
+      });
+      Toast.show({
+        type: 'success',
+        text1: 'Image mise à jour',
+      });
+    }
+  }
+};
+
+useEffect(() => {
+  const fetchProfile = async () => {
+    const currentUser = auth().currentUser;
+    if (currentUser) {
+      const doc = await firestore().collection('users').doc(currentUser.uid).get();
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.photoProfil) {
+          setProfileImage(`data:image/jpeg;base64,${data.photoProfil}`);
+        }
+      }
+    }
+  };
+
+  fetchProfile();
+}, []);
 
 useEffect(() => {
   async function ajouterNomParDefaut() {
@@ -46,7 +94,17 @@ useEffect(() => {
       {/* Section supérieure avec photo et nom */}
       <View style={styles.profileHeader}>
         <View style={styles.profileIconContainer}>
-          <Icon name="person" size={50} color="#555" />
+          <TouchableOpacity onPress={choisirImageProfil}>
+  {profileImage ? (
+    <Image
+      source={{ uri: profileImage }}
+      style={{ width: 60, height: 60, borderRadius: 30 }}
+    />
+  ) : (
+    <Icon name="person" size={50} color="#555" />
+  )}
+</TouchableOpacity>
+
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text style={styles.userName}>{nom}</Text>
