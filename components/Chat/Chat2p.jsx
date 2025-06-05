@@ -21,7 +21,6 @@ const Chat2p = ({ route , navigation }) => {
   const currentUser = auth().currentUser;
   const flatListRef = useRef(null);
 
-  // Fonction pour générer l'ID du chat avec les deux UIDs triés
   const getChatId = () => {
     const ids = [currentUser.uid, recipientId].sort();
     return `chat_${ids.join('_')}`;
@@ -29,40 +28,36 @@ const Chat2p = ({ route , navigation }) => {
 
   const chatId = getChatId();
 
-  // Initialise le chat si n'existe pas encore
-// In your initializeChat function:
-const initializeChat = async () => {
-  try {
-    const chatRef = Firestore().collection('chats').doc(chatId);
-    const chatDoc = await chatRef.get();
+  const initializeChat = async () => {
+    try {
+      const chatRef = Firestore().collection('chats').doc(chatId);
+      const chatDoc = await chatRef.get();
 
-    if (!chatDoc.exists) {
-      const participants = [currentUser.uid, recipientId].sort();
+      if (!chatDoc.exists) {
+        const participants = [currentUser.uid, recipientId].sort();
 
-      await chatRef.set({
-        participants: participants,
-        participantNames: {
-          [participants[0]]: participants[0] === currentUser.uid 
-            ? (currentUser.displayName || 'User') 
-            : recipientName,
-          [participants[1]]: participants[1] === currentUser.uid 
-            ? (currentUser.displayName || 'User') 
-            : recipientName
-        },
-        createdAt: Firestore.FieldValue.serverTimestamp(),
-        updatedAt: Firestore.FieldValue.serverTimestamp(),
-        lastMessage: "",
-        lastMessageSender: ""
-      });
+        await chatRef.set({
+          participants,
+          participantNames: {
+            [participants[0]]: participants[0] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName,
+            [participants[1]]: participants[1] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName
+          },
+          createdAt: Firestore.FieldValue.serverTimestamp(),
+          updatedAt: Firestore.FieldValue.serverTimestamp(),
+          lastMessage: "",
+          lastMessageSender: ""
+        });
+      }
+    } catch (error) {
+      console.error("Chat initialization error:", error);
+      Alert.alert("Error", "Could not initialize chat");
     }
-  } catch (error) {
-    console.error("Chat initialization error:", error);
-    Alert.alert("Error", "Could not initialize chat");
-  }
-};
+  };
 
-
-  // Marquer les messages non lus comme lus
   const markMessagesAsRead = async () => {
     const messagesRef = Firestore()
       .collection('chats')
@@ -84,36 +79,40 @@ const initializeChat = async () => {
     await batch.commit();
   };
 
-  // Configurer le listener sur les messages
- const setupChatListener = () => {
-  return Firestore()
-    .collection('chats')
-    .doc(chatId)
-    .collection('messages')
-    .orderBy('createdAt', 'asc')
-    .onSnapshot(
-      (snapshot) => {
-        const msgs = [];
-        snapshot.forEach((doc) => {
-          msgs.push({
-            id: doc.id,
-            ...doc.data()
+  const setupChatListener = () => {
+    return Firestore()
+      .collection('chats')
+      .doc(chatId)
+      .collection('messages')
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(
+        (snapshot) => {
+          const msgs = [];
+          snapshot.forEach((doc) => {
+            msgs.push({
+              id: doc.id,
+              ...doc.data()
+            });
           });
-        });
-        setMessages(msgs);
-      },
-      (error) => {
-        console.error("Message listener error:", error);
-        if (error.code === 'permission-denied') {
-          Alert.alert("Permission Error", "You don't have permission to view this chat");
-        } else {
-          Alert.alert("Error", "Failed to load messages");
+          setMessages(msgs);
+          // Marquer comme lus dès réception
+          markMessagesAsRead();
+          // Scroll vers le dernier message
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 200);
+        },
+        (error) => {
+          console.error("Message listener error:", error);
+          if (error.code === 'permission-denied') {
+            Alert.alert("Permission Error", "You don't have permission to view this chat");
+          } else {
+            Alert.alert("Error", "Failed to load messages");
+          }
         }
-      }
-    );
-};
+      );
+  };
 
-  // État de la disponibilité de l'autre utilisateur
   const [isRecipientOnline, setIsRecipientOnline] = useState(false);
 
   useEffect(() => {
@@ -148,84 +147,91 @@ const initializeChat = async () => {
     };
   }, [currentUser, chatId]);
 
-  // Fonction pour envoyer un message
-// In your sendMessage function:
-const sendMessage = async () => {
-  if (!messageText.trim() || !currentUser) return;
+  const sendMessage = async () => {
+    if (!messageText.trim() || !currentUser) return;
 
-  try {
-    const chatRef = Firestore().collection('chats').doc(chatId);
-    
-    // Check if chat exists
-    const chatDoc = await chatRef.get();
-    if (!chatDoc.exists) {
-      const participants = [currentUser.uid, recipientId].sort();
-      await chatRef.set({
-        participants: participants,
-        participantNames: {
-          [participants[0]]: participants[0] === currentUser.uid 
-            ? (currentUser.displayName || 'User') 
-            : recipientName,
-          [participants[1]]: participants[1] === currentUser.uid 
-            ? (currentUser.displayName || 'User') 
-            : recipientName
-        },
+    try {
+      const chatRef = Firestore().collection('chats').doc(chatId);
+      
+      const chatDoc = await chatRef.get();
+      if (!chatDoc.exists) {
+        const participants = [currentUser.uid, recipientId].sort();
+        await chatRef.set({
+          participants,
+          participantNames: {
+            [participants[0]]: participants[0] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName,
+            [participants[1]]: participants[1] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName
+          },
+          createdAt: Firestore.FieldValue.serverTimestamp(),
+          updatedAt: Firestore.FieldValue.serverTimestamp(),
+          lastMessage: messageText,
+          lastMessageSender: currentUser.uid
+        });
+      }
+
+      await chatRef.collection('messages').add({
+        text: messageText,
+        senderId: currentUser.uid,
         createdAt: Firestore.FieldValue.serverTimestamp(),
-        updatedAt: Firestore.FieldValue.serverTimestamp(),
-        lastMessage: messageText,
-        lastMessageSender: currentUser.uid
+        isRead: false,
+        readBy: [currentUser.uid]
       });
+
+      await chatRef.update({
+        lastMessage: messageText,
+        lastMessageSender: currentUser.uid,
+        updatedAt: Firestore.FieldValue.serverTimestamp()
+      });
+
+      setMessageText('');
+    } catch (error) {
+      console.error("Send message error:", error);
+      Alert.alert("Erreur", "Impossible d'envoyer le message");
     }
+  };
 
-    // Add message
-    await chatRef.collection('messages').add({
-      text: messageText,
-      senderId: currentUser.uid,
-      createdAt: Firestore.FieldValue.serverTimestamp(),
-      isRead: false,
-      readBy: [currentUser.uid]
-    });
-
-    // Update chat
-    await chatRef.update({
-      lastMessage: messageText,
-      lastMessageSender: currentUser.uid,
-      updatedAt: Firestore.FieldValue.serverTimestamp()
-    });
-
-    setMessageText('');
-  } catch (error) {
-    console.error("Send message error:", error);
-    Alert.alert("Erreur", "Impossible d'envoyer le message");
-  }
-};
-
-  // Rendu d'un message dans la liste
+  // Message rendu avec style “WhatsApp-like” :
   const renderMessage = ({ item }) => {
     const isCurrentUser = item.senderId === currentUser?.uid;
     const messageDate = item.createdAt?.toDate() || new Date();
 
     return (
-      <View style={[
-        styles.messageContainer,
-        isCurrentUser ? styles.currentUserMessage : styles.otherUserMessage
-      ]}>
-        <Text style={isCurrentUser ? styles.currentUserText : styles.otherUserText}>
-          {item.text}
-        </Text>
-        <Text style={[
-          styles.messageTime,
-          isCurrentUser ? styles.currentUserTime : styles.otherUserTime
+      <View
+        style={[
+          styles.messageWrapper,
+          isCurrentUser ? styles.messageRight : styles.messageLeft
+        ]}
+      >
+        <View style={[
+          styles.bubble,
+          isCurrentUser ? styles.bubbleRight : styles.bubbleLeft
         ]}>
-          {messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-        <Text style={styles.statusText}>
-          {isCurrentUser ? (
-            item.readBy?.length > 1 
-              ? <Icon name="checkmark-done-outline" /> 
-              : <Icon name="checkmark-outline" />
-          ) : null}
-        </Text>
+          <Text style={[styles.messageText, isCurrentUser ? styles.textRight : styles.textLeft]}>
+            {item.text}
+          </Text>
+          <View style={styles.metaInfo}>
+            <Text style={[styles.timeText, isCurrentUser ? styles.textRight : styles.textLeft]}>
+              {messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </Text>
+            {isCurrentUser && (
+              <Icon
+                name={item.readBy?.length > 1 ? "checkmark-done" : "checkmark"}
+                size={16}
+                color={item.readBy?.length > 1 ? "#4FC3F7" : "white"}
+                style={{ marginLeft: 4 }}
+              />
+            )}
+          </View>
+          {/* Triangle (tail) */}
+          <View style={[
+            styles.tail,
+            isCurrentUser ? styles.tailRight : styles.tailLeft
+          ]} />
+        </View>
       </View>
     );
   };
@@ -250,6 +256,7 @@ const sendMessage = async () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+        onLayout={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
 
       <View style={styles.inputContainer}>
@@ -261,11 +268,11 @@ const sendMessage = async () => {
           multiline
         />
         <TouchableOpacity 
-          style={styles.sendButton} 
+          style={[styles.sendButton, !messageText.trim() && {opacity: 0.5}]}
           onPress={sendMessage}
           disabled={!messageText.trim()}
         >
-          <Icon name="send-outline" style={styles.sendButtonText} size={23} />
+          <Icon name="send" style={styles.sendButtonText} size={23} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -279,7 +286,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 16,
-    backgroundColor: '#E1B055',
+    backgroundColor: '#1E90FF',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -289,41 +296,91 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  statusText: {
+    color: 'white',
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
   messagesList: {
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
   },
-  messageContainer: {
-    maxWidth: '80%',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
+  messageWrapper: {
+    marginBottom: 10,
+    flexDirection: 'row',
   },
-  currentUserMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#E1B055',
-    borderTopRightRadius: 0,
+  messageLeft: {
+    justifyContent: 'flex-start',
   },
-  otherUserMessage: {
-    alignSelf: 'flex-start',
+  messageRight: {
+    justifyContent: 'flex-end',
+  },
+  bubble: {
+    maxWidth: '75%',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    position: 'relative',
+  },
+  bubbleLeft: {
     backgroundColor: '#fff',
     borderTopLeftRadius: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  currentUserText: {
-    color: 'white',
+  bubbleRight: {
+    backgroundColor: '#1E90FF',
+    borderTopRightRadius: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  otherUserText: {
+  messageText: {
+    fontSize: 16,
+  },
+  textLeft: {
     color: '#333',
   },
-  messageTime: {
-    fontSize: 10,
+  textRight: {
+    color: 'white',
+  },
+  metaInfo: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
     marginTop: 4,
-    textAlign: 'right',
   },
-  currentUserTime: {
-    color: 'rgba(255, 255, 255, 0.7)',
+  timeText: {
+    fontSize: 11,
+    opacity: 0.7,
   },
-  otherUserTime: {
-    color: 'rgba(0, 0, 0, 0.5)',
+  // Triangle "tail" sous forme de petit triangle CSS-like
+  tail: {
+    position: 'absolute',
+    bottom: 0,
+    width: 0,
+    height: 0,
+    borderTopWidth: 15,
+    borderTopColor: 'transparent',
+  },
+  tailLeft: {
+    left: -8,
+    borderRightWidth: 10,
+    borderRightColor: '#fff',
+    borderBottomWidth: 15,
+    borderBottomColor: 'transparent',
+  },
+  tailRight: {
+    right: -8,
+    borderLeftWidth: 10,
+    borderLeftColor: '#1E90FF',
+    borderBottomWidth: 15,
+    borderBottomColor: 'transparent',
   },
   inputContainer: {
     flexDirection: 'row',
@@ -341,18 +398,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 8,
     maxHeight: 100,
+    fontSize: 16,
+    backgroundColor: '#fff',
   },
   sendButton: {
     justifyContent: 'center',
     paddingHorizontal: 16,
-    backgroundColor: '#E1B055',
+    backgroundColor: '#1E90FF',
     borderRadius: 20,
-  },
-  statusText: {
-    color: 'white',
-    fontSize: 14,
-    fontStyle: 'italic',
-    marginTop: 4,
   },
   sendButtonText: {
     color: 'white',
