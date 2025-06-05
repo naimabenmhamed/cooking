@@ -1,65 +1,46 @@
-import { StyleSheet, View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
-import auth from '@react-native-firebase/auth';
-export default function Home({ navigation }) {  
-  // Ajoutez navigation dans les props
-  const handleLogout = async () => {
-    try {
-      await auth().signOut();
-      navigation.navigate('Login');  // Navigation vers l'écran de connexion
-    } catch (error) {
-      Alert.alert('Erreur', error.message);
-    }
+import 'react-native-gesture-handler'; // tout en haut
+import React, { useState, useEffect } from 'react';
+import { SafeAreaView, StyleSheet , View, Platform, KeyboardAvoidingView} from 'react-native';
+import { GiftedChat } from 'react-native-gifted-chat';
+
+export default function App() {
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    setMessages([
+      {
+        _id: 1,
+        text: 'Bonjour !',
+        createdAt: new Date(),
+        user: {
+          _id: 2,
+          name: 'Bot',
+        },
+      },
+    ]);
+  }, []);
+
+  const onSend = (newMessages = []) => {
+    setMessages(prevMessages => GiftedChat.append(prevMessages, newMessages));
   };
 
   return (
-    <View style={styles.container}>
-      <TextInput 
-        placeholder="البحث" 
-        placeholderTextColor="#999" 
-        style={styles.input} 
+    <SafeAreaView style={styles.container}>
+    <View style={{ flex: 1 }}>
+      <GiftedChat
+        messages={messages}
+        onSend={onSend}
+        user={{ _id: 1 }}
       />
-      
-      {/* Bouton de déconnexion stylisé */}
-      <TouchableOpacity 
-        style={styles.logoutButton} 
-        onPress={handleLogout}
-        
-      >
-        <Text style={styles.logoutText}>تسجيل الخروج</Text>  {/* "Déconnexion" en arabe */}
-        
-      </TouchableOpacity>
-      
+      {Platform.OS === 'android' && <KeyboardAvoidingView behavior="padding" />}
     </View>
+  </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  input: {
-    backgroundColor: '#FFF5F0',
-    borderRadius: 15,
-    padding: 15,
-    marginVertical: 8,
-    borderColor: '#E1B055',
-    borderWidth: 1,
-    color: '#000',
-    fontSize: 14,
-  },
-  logoutButton: {
-    backgroundColor: '#FF5722',
-    borderRadius: 25,
-    padding: 15,
-    marginTop: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutText: {
-    color: '#FFFFFF',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
 });
+

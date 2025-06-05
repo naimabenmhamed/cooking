@@ -13,6 +13,8 @@ import Chat from "./components/Chat/Chat";
 import ChatListe from "./components/Chat/ChatListe";
 import AddToChat from "./components/Chat/AddToChat";
 import Recorde from "./components/Main/Recorde";
+
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
