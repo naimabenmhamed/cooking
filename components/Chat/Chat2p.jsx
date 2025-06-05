@@ -8,7 +8,9 @@ import {
   StyleSheet, 
   Alert,
   KeyboardAvoidingView,
-  Platform 
+  Platform,
+  Modal,
+  ScrollView
 } from 'react-native';
 import Firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
@@ -18,6 +20,8 @@ const Chat2p = ({ route , navigation }) => {
   const { recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [userNotes, setUserNotes] = useState([]);
   const currentUser = auth().currentUser;
   const flatListRef = useRef(null);
 
@@ -27,6 +31,85 @@ const Chat2p = ({ route , navigation }) => {
   };
 
   const chatId = getChatId();
+
+  // Fonction pour récupérer les notes de l'utilisateur
+  const fetchUserNotes = async () => {
+    try {
+      const querySnapshot = await Firestore()
+        .collection('notes')
+        .where('userId', '==', currentUser.uid)
+        .get();
+
+      const notes = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).sort((a, b) => b.createdAt - a.createdAt);
+
+      setUserNotes(notes);
+    } catch (error) {
+      console.error("Erreur lors de la récupération des notes:", error);
+    }
+  };
+
+  // Fonction pour partager une note
+  const shareNote = async (note) => {
+    try {
+      const chatRef = Firestore().collection('chats').doc(chatId);
+      
+      // Vérifier si le chat existe
+      const chatDoc = await chatRef.get();
+      if (!chatDoc.exists) {
+        const participants = [currentUser.uid, recipientId].sort();
+        await chatRef.set({
+          participants,
+          participantNames: {
+            [participants[0]]: participants[0] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName,
+            [participants[1]]: participants[1] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName
+          },
+          createdAt: Firestore.FieldValue.serverTimestamp(),
+          updatedAt: Firestore.FieldValue.serverTimestamp(),
+          lastMessage: `📝 Note partagée: ${note.title}`,
+          lastMessageSender: currentUser.uid
+        });
+      }
+
+      // Créer le message de partage de note
+      await chatRef.collection('messages').add({
+        text: `📝 Note partagée: ${note.title}`,
+        senderId: currentUser.uid,
+        createdAt: Firestore.FieldValue.serverTimestamp(),
+        isRead: false,
+        readBy: [currentUser.uid],
+        messageType: 'shared_note',
+        sharedNote: {
+          id: note.id,
+          title: note.title,
+          description: note.description,
+          createdAt: note.createdAt,
+          visibility: note.visibility,
+          sharedBy: currentUser.uid,
+          sharedByName: currentUser.displayName || 'Utilisateur'
+        }
+      });
+
+      // Mettre à jour le dernier message du chat
+      await chatRef.update({
+        lastMessage: `📝 Note partagée: ${note.title}`,
+        lastMessageSender: currentUser.uid,
+        updatedAt: Firestore.FieldValue.serverTimestamp()
+      });
+
+      setShowNotesModal(false);
+      Alert.alert("Succès", "Note partagée avec succès!");
+    } catch (error) {
+      console.error("Erreur lors du partage:", error);
+      Alert.alert("Erreur", "Impossible de partager la note");
+    }
+  };
 
   const initializeChat = async () => {
     try {
@@ -95,9 +178,7 @@ const Chat2p = ({ route , navigation }) => {
             });
           });
           setMessages(msgs);
-          // Marquer comme lus dès réception
           markMessagesAsRead();
-          // Scroll vers le dernier message
           setTimeout(() => {
             flatListRef.current?.scrollToEnd({ animated: true });
           }, 200);
@@ -178,7 +259,8 @@ const Chat2p = ({ route , navigation }) => {
         senderId: currentUser.uid,
         createdAt: Firestore.FieldValue.serverTimestamp(),
         isRead: false,
-        readBy: [currentUser.uid]
+        readBy: [currentUser.uid],
+        messageType: 'text'
       });
 
       await chatRef.update({
@@ -194,10 +276,30 @@ const Chat2p = ({ route , navigation }) => {
     }
   };
 
-  // Message rendu avec style “WhatsApp-like” :
+  const formatDate = (firebaseDate) => {
+    if (!firebaseDate || !firebaseDate.toDate) return '';
+    const d = firebaseDate.toDate();
+    return d.toLocaleDateString("fr-FR", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  // Fonction pour afficher les détails d'une note partagée
+  const showSharedNoteDetails = (sharedNote) => {
+    Alert.alert(
+      sharedNote.title,
+      `${sharedNote.description}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
+      [{ text: "Fermer", style: "cancel" }]
+    );
+  };
+
+  // Message rendu avec style "WhatsApp-like" incluant les notes partagées
   const renderMessage = ({ item }) => {
     const isCurrentUser = item.senderId === currentUser?.uid;
     const messageDate = item.createdAt?.toDate() || new Date();
+    const isSharedNote = item.messageType === 'shared_note';
 
     return (
       <View
@@ -206,13 +308,32 @@ const Chat2p = ({ route , navigation }) => {
           isCurrentUser ? styles.messageRight : styles.messageLeft
         ]}
       >
-        <View style={[
-          styles.bubble,
-          isCurrentUser ? styles.bubbleRight : styles.bubbleLeft
-        ]}>
+        <TouchableOpacity
+          style={[
+            styles.bubble,
+            isCurrentUser ? styles.bubbleRight : styles.bubbleLeft,
+            isSharedNote && styles.sharedNoteBubble
+          ]}
+          onPress={isSharedNote ? () => showSharedNoteDetails(item.sharedNote) : undefined}
+          disabled={!isSharedNote}
+        >
+          {isSharedNote && (
+            <View style={styles.sharedNoteHeader}>
+              <Icon name="document-text" size={16} color="#1E90FF" />
+              <Text style={styles.sharedNoteLabel}>Note partagée</Text>
+            </View>
+          )}
+          
           <Text style={[styles.messageText, isCurrentUser ? styles.textRight : styles.textLeft]}>
             {item.text}
           </Text>
+          
+          {isSharedNote && (
+            <Text style={styles.sharedNoteDescription} numberOfLines={2}>
+              {item.sharedNote.description}
+            </Text>
+          )}
+          
           <View style={styles.metaInfo}>
             <Text style={[styles.timeText, isCurrentUser ? styles.textRight : styles.textLeft]}>
               {messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -226,15 +347,78 @@ const Chat2p = ({ route , navigation }) => {
               />
             )}
           </View>
-          {/* Triangle (tail) */}
+          
           <View style={[
             styles.tail,
             isCurrentUser ? styles.tailRight : styles.tailLeft
           ]} />
-        </View>
+        </TouchableOpacity>
       </View>
     );
   };
+
+  // Modal pour sélectionner une note à partager
+  const NotesModal = () => (
+    <Modal
+      visible={showNotesModal}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={() => setShowNotesModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Choisir une note à partager</Text>
+            <TouchableOpacity onPress={() => setShowNotesModal(false)}>
+              <Icon name="close" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.notesContainer}>
+            {userNotes.map((note) => (
+              <TouchableOpacity
+                key={note.id}
+                style={styles.noteItem}
+                onPress={() => shareNote(note)}
+              >
+                <View style={styles.noteContent}>
+                  <Text style={styles.noteTitle} numberOfLines={1}>
+                    {note.title}
+                  </Text>
+                  <Text style={styles.noteDescription} numberOfLines={2}>
+                    {note.description}
+                  </Text>
+                  <View style={styles.noteFooter}>
+                    <Text style={styles.noteDate}>
+                      {formatDate(note.createdAt)}
+                    </Text>
+                    <View style={styles.visibilityBadge}>
+                      <Icon 
+                        name={note.visibility === 'public' ? 'globe' : 'lock-closed'} 
+                        size={12} 
+                        color="#666" 
+                      />
+                      <Text style={styles.visibilityText}>
+                        {note.visibility === 'public' ? 'Public' : 'Privé'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <Icon name="share" size={20} color="#1E90FF" />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          
+          {userNotes.length === 0 && (
+            <View style={styles.emptyState}>
+              <Icon name="document-text" size={50} color="#ccc" />
+              <Text style={styles.emptyText}>Aucune note disponible</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <KeyboardAvoidingView
@@ -245,7 +429,7 @@ const Chat2p = ({ route , navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerText}>Discussion avec {recipientName}</Text>
         <Text style={styles.statusText}>
-          {isRecipientOnline ?  'en ligne' : 'pas en ligne'}
+          {isRecipientOnline ? 'en ligne' : 'pas en ligne'}
         </Text>
       </View>
 
@@ -260,6 +444,16 @@ const Chat2p = ({ route , navigation }) => {
       />
 
       <View style={styles.inputContainer}>
+        <TouchableOpacity 
+          style={styles.shareButton}
+          onPress={() => {
+            fetchUserNotes();
+            setShowNotesModal(true);
+          }}
+        >
+          <Icon name="document-text" size={20} color="#1E90FF" />
+        </TouchableOpacity>
+        
         <TextInput
           style={styles.input}
           value={messageText}
@@ -267,6 +461,7 @@ const Chat2p = ({ route , navigation }) => {
           placeholder="Écrivez un message..."
           multiline
         />
+        
         <TouchableOpacity 
           style={[styles.sendButton, !messageText.trim() && {opacity: 0.5}]}
           onPress={sendMessage}
@@ -275,6 +470,8 @@ const Chat2p = ({ route , navigation }) => {
           <Icon name="send" style={styles.sendButtonText} size={23} />
         </TouchableOpacity>
       </View>
+
+      <NotesModal />
     </KeyboardAvoidingView>
   );
 };
@@ -340,6 +537,27 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
   },
+  sharedNoteBubble: {
+    borderWidth: 1,
+    borderColor: '#1E90FF',
+  },
+  sharedNoteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  sharedNoteLabel: {
+    fontSize: 12,
+    color: '#1E90FF',
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  sharedNoteDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
   messageText: {
     fontSize: 16,
   },
@@ -359,7 +577,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     opacity: 0.7,
   },
-  // Triangle "tail" sous forme de petit triangle CSS-like
   tail: {
     position: 'absolute',
     bottom: 0,
@@ -388,6 +605,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopWidth: 1,
     borderTopColor: '#ddd',
+    alignItems: 'flex-end',
+  },
+  shareButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginRight: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 20,
   },
   input: {
     flex: 1,
@@ -410,6 +637,84 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  // Styles pour le modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: 'white',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  notesContainer: {
+    maxHeight: 400,
+  },
+  noteItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  noteContent: {
+    flex: 1,
+    marginRight: 12,
+  },
+  noteTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  noteDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  noteFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  noteDate: {
+    fontSize: 12,
+    color: '#999',
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  visibilityText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 4,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 10,
   },
 });
 
