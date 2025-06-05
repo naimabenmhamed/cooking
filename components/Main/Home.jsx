@@ -1,5 +1,7 @@
 import { StyleSheet, View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
 import auth from '@react-native-firebase/auth';
+import Icon from 'react-native-vector-icons/Ionicons';
+
 export default function Home({ navigation }) {  
  
   const handleLogout = async () => {
@@ -26,6 +28,9 @@ export default function Home({ navigation }) {
         
       >
         <Text style={styles.logoutText}>تسجيل الخروج</Text>
+      </TouchableOpacity>
+       <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('ChatListe')}>
+        <Icon name="chatbox" size={30} color="#777" />
       </TouchableOpacity>
       
     </View>
@@ -61,4 +66,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
+  chatButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 20,
+    backgroundColor: '#1E90FF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#555',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  }
 });
