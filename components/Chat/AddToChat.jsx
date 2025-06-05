@@ -181,7 +181,7 @@ export default function AddToChat() {
             style={styles.addFriendButton}
             onPress={() => addFriend(item)}
           >
-            <Icon name="person-add-outline" size={20} color="#E1B055" />
+            <Icon name="person-add-outline" size={20} color="#1E90FF" />
           </TouchableOpacity>
         )}
       </View>
@@ -223,11 +223,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   input: {
-    backgroundColor: '#FFF5F0',
+    backgroundColor: ' #E0FFFF',
     borderRadius: 15,
     padding: 15,
     marginVertical: 8,
-    borderColor: '#E1B055',
+    borderColor: '#1E90FF',
     borderWidth: 1,
     color: '#000',
     fontSize: 14,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#E1B055',
+    backgroundColor: '#1E90FF',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,

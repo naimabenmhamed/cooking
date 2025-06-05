@@ -90,7 +90,7 @@ const ChatList = () => {
         </Text>
       </View>
       
-      <Icon name="chatbox-ellipses-outline" size={24} color="#E1B055" />
+      <Icon name="chatbox-ellipses-outline" size={24} color="#1E90FF" />
     </TouchableOpacity>
   );
 
@@ -180,7 +180,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   avatarPlaceholder: {
-    backgroundColor: '#E1B055',
+    backgroundColor: '#1E90FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
