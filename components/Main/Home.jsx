@@ -7,7 +7,10 @@ import React, { useEffect, useState } from "react";
 export default function Home({ navigation }) {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+  const openNote = (note) => {
+  navigation.navigate('AfficherNotes', { note, fromHome: true });
+};
+
   const handleLogout = async () => {
     try {
       await auth().signOut();
@@ -46,15 +49,16 @@ export default function Home({ navigation }) {
   }, []);
 
   const renderItem = ({ item }) => (
-    <View style={styles.noteItem}>
-      <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
-      <Text style={styles.noteTitle}>{item.title}</Text>
-      <Text style={styles.noteContent}>{item.description}</Text>
-      {item.ingredient && (
-        <Text style={styles.noteIngredient}>Ingrédients: {item.ingredient}</Text>
-      )}
-    </View>
-  );
+  <TouchableOpacity onPress={() => openNote(item)} style={styles.noteItem}>
+    <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
+    <Text style={styles.noteTitle}>{item.title}</Text>
+    <Text style={styles.noteContent}>{item.description}</Text>
+    {item.ingredient && (
+      <Text style={styles.noteIngredient}>Ingrédients: {item.ingredient}</Text>
+    )}
+  </TouchableOpacity>
+);
+
 
   return (
     <View style={styles.container}>

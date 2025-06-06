@@ -5,7 +5,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Add from './Add';
 export default function AfficherNotes ({route,navigation}){
 
-  const { note } = route.params;
+  const { note, fromHome } = route.params;
   
 
   if (!note) {
@@ -44,6 +44,12 @@ const handleDeleteText = async (id) => {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      {note.userName && (
+  <Text style={[styles.label, { fontSize: 20, textAlign: 'center', marginBottom: 10 }]}>
+    {note.userName}
+  </Text>
+)}
+
     <Text style={styles.label}>Titre</Text>
     <Text style={styles.text}>{note.title}</Text>
 
@@ -71,16 +77,19 @@ const handleDeleteText = async (id) => {
 
 
 
-       <TouchableOpacity
-      onPress={() => navigation.navigate('Add', {
+      {!fromHome && (
+  <TouchableOpacity
+    onPress={() => navigation.navigate('Add', {
       id: note.id,
       title: note.title,
       description: note.description
-      })}
-      style={styles.button}
-      >
-     <Text style={styles.buttonText}>Modifier</Text>
-      </TouchableOpacity>
+    })}
+    style={styles.button}
+  >
+    <Text style={styles.buttonText}>Modifier</Text>
+  </TouchableOpacity>
+)}
+
       <Text style={styles.noteDate}>
       {note.createdAt?.toDate?.().toLocaleDateString("fr-FR", {
         day: "numeric",
