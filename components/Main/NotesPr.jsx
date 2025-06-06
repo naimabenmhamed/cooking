@@ -71,6 +71,10 @@ export default function  NotesPr() {
           >
             <View style={styles.noteView}>
               <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+  <Icon name="heart-outline" size={16} color="red" />
+  <Text style={{ marginLeft: 4 }}>{item.likes?.length || 0}</Text>
+</View>
               {/* <Text style={styles.noteText} numberOfLines={2}>{item.description}</Text> */}
               <Text style={styles.noteDate}>{formatDate(item.createdAt)}</Text>
               <TouchableOpacity
@@ -102,7 +106,7 @@ const styles = StyleSheet.create({
     marginVertical: -9, 
     padding: 45,
     borderRadius: 10,
-    shadowColor: '#FBD38D',
+    shadowColor: '#00FFFF',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     elevation: 4,
