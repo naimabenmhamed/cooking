@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TextInput, Alert, TouchableOpacity, FlatList, A
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import React, { useEffect, useState } from "react";
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function Home({ navigation }) {
   const [notes, setNotes] = useState([]);
@@ -48,16 +49,74 @@ export default function Home({ navigation }) {
     fetchNotes();
   }, []);
 
-  const renderItem = ({ item }) => (
-  <TouchableOpacity onPress={() => openNote(item)} style={styles.noteItem}>
-    <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
-    <Text style={styles.noteTitle}>{item.title}</Text>
-    <Text style={styles.noteContent}>{item.description}</Text>
-    {item.ingredient && (
-      <Text style={styles.noteIngredient}>Ingrédients: {item.ingredient}</Text>
-    )}
-  </TouchableOpacity>
-);
+
+
+const renderItem = ({ item }) => {
+  const currentUser = auth().currentUser;
+  const hasLiked = item.likes?.includes(currentUser?.uid);
+
+  const toggleLike = async () => {
+    if (!currentUser) return;
+
+    const noteRef = firestore().collection('notes').doc(item.id);
+
+    try {
+      await firestore().runTransaction(async (transaction) => {
+        const doc = await transaction.get(noteRef);
+        if (!doc.exists) return;
+
+        const data = doc.data();
+        const likes = data.likes || [];
+
+        if (likes.includes(currentUser.uid)) {
+          // retirer like
+          transaction.update(noteRef, {
+            likes: firestore.FieldValue.arrayRemove(currentUser.uid),
+          });
+        } else {
+          // ajouter like
+          transaction.update(noteRef, {
+            likes: firestore.FieldValue.arrayUnion(currentUser.uid),
+          });
+        }
+      });
+
+      // mettre à jour localement
+      setNotes(prev =>
+        prev.map(n =>
+          n.id === item.id
+            ? {
+                ...n,
+                likes: hasLiked
+                  ? n.likes.filter(id => id !== currentUser.uid)
+                  : [...(n.likes || []), currentUser.uid],
+              }
+            : n
+        )
+      );
+    } catch (error) {
+      console.error("Erreur lors du like :", error);
+    }
+  };
+
+  return (
+    <TouchableOpacity onPress={() => openNote(item)} style={styles.noteItem}>
+      <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
+      <Text style={styles.noteTitle}>{item.title}</Text>
+      <Text style={styles.noteContent}>{item.description}</Text>
+      {item.ingredient && (
+        <Text style={styles.noteIngredient}>Ingrédients: {item.ingredient}</Text>
+      )}
+
+      {/* Bouton Like */}
+      <TouchableOpacity onPress={toggleLike} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+        <Icon name={hasLiked ? "heart" : "heart-outline"} size={18} color="red" />
+        <Text style={{ marginLeft: 5 }}>{item.likes?.length || 0}</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+};
+
 
 
   return (

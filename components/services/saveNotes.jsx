@@ -94,6 +94,7 @@ export const saveNotes= (route, navigation) => {
               image: imageBase64,
              updatedAt: firestore.FieldValue.serverTimestamp(),
              userName,
+              likes: [], // <- Champ ajouté ici
            });
        } else {
          // Création d'une nouvelle note
