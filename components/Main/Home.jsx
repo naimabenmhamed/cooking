@@ -1,6 +1,8 @@
 import { StyleSheet, View, Text, TextInput, Alert, TouchableOpacity } from "react-native";
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Chatboot from './chatboot';
+
 
 export default function Home({ navigation }) {  
  
@@ -29,7 +31,7 @@ export default function Home({ navigation }) {
       >
         <Text style={styles.logoutText}>تسجيل الخروج</Text>
       </TouchableOpacity>
-       <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('ChatListe')}>
+       <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chatboot')}>
         <Icon name="chatbox" size={30} color="#777" />
       </TouchableOpacity>
       
