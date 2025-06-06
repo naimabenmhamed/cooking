@@ -72,9 +72,9 @@ export default function  NotesPr() {
             <View style={styles.noteView}>
               <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-  <Icon name="heart-outline" size={16} color="red" />
-  <Text style={{ marginLeft: 4 }}>{item.likes?.length || 0}</Text>
-</View>
+                    <Icon name="heart-outline" size={16} color="red" />
+                          <Text style={{ marginLeft: 4 }}>{item.likes?.length || 0}</Text>
+              </View>
               {/* <Text style={styles.noteText} numberOfLines={2}>{item.description}</Text> */}
               <Text style={styles.noteDate}>{formatDate(item.createdAt)}</Text>
               <TouchableOpacity

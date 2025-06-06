@@ -22,32 +22,29 @@ export default function Home({ navigation }) {
   };
 
   useEffect(() => {
-    const fetchNotes = async () => {
-      try {
-        const snapshot = await firestore()
-          .collection('notes')
-          .where('visibility', '==', 'public') // Utilise 'public' comme dans les règles Firestore
-          .get();
+  const unsubscribe = firestore()
+    .collection('notes')
+    .where('visibility', '==', 'public')
+    .onSnapshot(snapshot => {
+      let fetchedNotes = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-        let fetchedNotes = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+      // Mélanger les notes aléatoirement
+      fetchedNotes = fetchedNotes.sort(() => 0.5 - Math.random());
 
-        // Mélanger les notes aléatoirement
-        fetchedNotes = fetchedNotes.sort(() => 0.5 - Math.random());
+      setNotes(fetchedNotes);
+      setLoading(false);
+    }, error => {
+      console.error('Erreur lors de l’écoute des notes :', error);
+      Alert.alert('Erreur', 'Impossible de charger les notes publiques');
+      setLoading(false);
+    });
 
-        setNotes(fetchedNotes);
-      } catch (error) {
-        console.error('Erreur lors de la récupération des notes:', error);
-        Alert.alert('Erreur', 'Impossible de charger les notes publiques');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchNotes();
-  }, []);
+  // Nettoyage du listener lors du démontage du composant
+  return () => unsubscribe();
+}, []);
 
 
 
