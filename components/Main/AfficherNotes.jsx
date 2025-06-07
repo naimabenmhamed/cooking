@@ -1,13 +1,15 @@
 import React,{useState} from 'react'
 import firestore from '@react-native-firebase/firestore'
+import auth from '@react-native-firebase/auth'
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, Alert, Keyboard,Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Add from './Add';
+
 export default function AfficherNotes ({route,navigation}){
 
   const { note, fromHome } = route.params;
+  const currentUser = auth().currentUser;
   
-
   if (!note) {
     return (
       <View style={styles.container}>
@@ -16,16 +18,18 @@ export default function AfficherNotes ({route,navigation}){
     );
   }
 
-const handleDeleteText = async (id) => {
-  try {
-    await firestore().collection('notes').doc(id).delete();
-    Alert.alert("Supprimé", "La note a été supprimée.");
-    navigation.goBack(); // Retour à la liste
-  } catch (error) {
-    console.error("Erreur lors de la suppression :", error);
-  }
-};
+  // Vérifier si l'utilisateur actuel est le propriétaire de la note
+  const isOwner = currentUser && (note.userId === currentUser.uid || note.sharedBy === currentUser.uid);
 
+  const handleDeleteText = async (id) => {
+    try {
+      await firestore().collection('notes').doc(id).delete();
+      Alert.alert("Supprimé", "La note a été supprimée.");
+      navigation.goBack(); // Retour à la liste
+    } catch (error) {
+      console.error("Erreur lors de la suppression :", error);
+    }
+  };
 
   const handlePublish = async () => {
     try {
@@ -37,9 +41,7 @@ const handleDeleteText = async (id) => {
       } catch (error) {
       Alert.alert('Erreur', 'Une erreur s\'est produite lors de la publication.');
       console.error(error);
-
     }
-
   };
 
   return (
@@ -56,76 +58,64 @@ const handleDeleteText = async (id) => {
     <Text style={styles.label}>Leçon</Text>
     <Text style={styles.text}>{note.ingredient || 'Aucun ingrédient'}</Text>
 
-    {/* <Text style={styles.label}>Description</Text>
-    <Text style={styles.text}>{note.description || 'Aucune description'}</Text> */}
-
-    {note.visibility !== 'public' && (
-    <TouchableOpacity style={styles.button} onPress={handlePublish}>
-    <Text style={styles.buttonText}>Publier la recette</Text>
-    </TouchableOpacity>
-  )}
-
+    {/* Afficher le bouton "Publier" seulement si l'utilisateur est le propriétaire et la note n'est pas publique */}
+    {isOwner && note.visibility !== 'public' && (
+      <TouchableOpacity style={styles.button} onPress={handlePublish}>
+        <Text style={styles.buttonText}>Publier la recette</Text>
+      </TouchableOpacity>
+    )}
       
-        {note.image && (
-  <Image
-    source={{ uri: `data:image/jpeg;base64,${note.image}` }}
-    style={{ width: '100%', height: 200, marginTop: 20, borderRadius: 10 }}
-    resizeMode="cover"
-  />
-)}
+    {note.image && (
+      <Image
+        source={{ uri: `data:image/jpeg;base64,${note.image}` }}
+        style={{ width: '100%', height: 200, marginTop: 20, borderRadius: 10 }}
+        resizeMode="cover"
+      />
+    )}
 
+    {/* Afficher le bouton "Modifier" seulement si l'utilisateur est le propriétaire et pas depuis Home */}
+    {isOwner && !fromHome && (
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Add', {
+          id: note.id,
+          title: note.title,
+          description: note.description
+        })}
+        style={styles.button}
+      >
+        <Text style={styles.buttonText}>Modifier</Text>
+      </TouchableOpacity>
+    )}
 
-
-
-      {!fromHome && (
-  <TouchableOpacity
-    onPress={() => navigation.navigate('Add', {
-      id: note.id,
-      title: note.title,
-      description: note.description
-    })}
-    style={styles.button}
-  >
-    <Text style={styles.buttonText}>Modifier</Text>
-  </TouchableOpacity>
-)}
-
-      <Text style={styles.noteDate}>
+    <Text style={styles.noteDate}>
       {note.createdAt?.toDate?.().toLocaleDateString("fr-FR", {
         day: "numeric",
         month: "short",
         year: "numeric",
       }) ?? ''}
     </Text>
-     <TouchableOpacity
-      
-      style={styles.button}
-      >
-     <Text style={styles.buttonText}>PDF</Text>
-      </TouchableOpacity>
-
-       <TouchableOpacity
-      
-      style={styles.button}
-      >
-     <Text style={styles.buttonText}>ZIP</Text>
-      </TouchableOpacity>
-
-         <TouchableOpacity
-      
-      style={styles.button}
-      >
-     <Text style={styles.buttonText}>Resumer</Text>
-      </TouchableOpacity>
-
-    <TouchableOpacity
-      onPress={() => handleDeleteText(note.id)}
-      style={styles.deleteButton}
-    >
-      <Icon name="trash-outline" size={19} color="#999" />
+    
+    <TouchableOpacity style={styles.button}>
+      <Text style={styles.buttonText}>PDF</Text>
     </TouchableOpacity>
-     
 
+    <TouchableOpacity style={styles.button}>
+      <Text style={styles.buttonText}>ZIP</Text>
+    </TouchableOpacity>
+
+    <TouchableOpacity style={styles.button}>
+      <Text style={styles.buttonText}>Resumer</Text>
+    </TouchableOpacity>
+
+    {/* Afficher le bouton "Supprimer" seulement si l'utilisateur est le propriétaire */}
+    {isOwner && (
+      <TouchableOpacity
+        onPress={() => handleDeleteText(note.id)}
+        style={styles.deleteButton}
+      >
+        <Icon name="trash-outline" size={19} color="#999" />
+      </TouchableOpacity>
+    )}
 
     </ScrollView>
   );
@@ -153,7 +143,7 @@ const styles = StyleSheet.create({
   },
   noteView: {
     backgroundColor: '#fff',
-    marginHorizontal: 8, // Espace entre les colonnes (horizontal)
+    marginHorizontal: 8,
     marginVertical: -9, 
     padding: 45,
     borderRadius: 10,
@@ -185,7 +175,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     position :'absolute',
     bottom: 10, 
-    left: '50%',      // positionne le coin gauche du texte au milieu
+    left: '50%',
     transform: [{ translateX: -50 }],
   },
   deleteButton: {
@@ -195,7 +185,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 5,
     width: '20%',
-    
   },
   fletlisteStyle:{
     flexDirection: 'row',
