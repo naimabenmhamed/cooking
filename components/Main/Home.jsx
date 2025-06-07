@@ -8,6 +8,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 export default function Home({ navigation }) {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const openNote = (note) => {
   navigation.navigate('AfficherNotes', { note, fromHome: true });
 };
@@ -113,26 +115,33 @@ const renderItem = ({ item }) => {
     </TouchableOpacity>
   );
 };
+const filteredNotes = notes.filter(note =>
+  note.title?.toLowerCase().includes(searchQuery.toLowerCase())
+);
 
 
 
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder="البحث"
-        placeholderTextColor="#999"
-        style={styles.input}
-      />
+  placeholder="Trouver le titre de la note"
+  placeholderTextColor="#999"
+  style={styles.input}
+  value={searchQuery}
+  onChangeText={setSearchQuery}
+/>
+
 
       {loading ? (
         <ActivityIndicator size="large" color="#3B82F6" />
       ) : notes.length > 0 ? (
-        <FlatList
-          data={notes}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          showsVerticalScrollIndicator={false}
-        />
+       <FlatList
+  data={filteredNotes}
+  keyExtractor={(item) => item.id}
+  renderItem={renderItem}
+  showsVerticalScrollIndicator={false}
+/>
+
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Aucune note publique disponible</Text>
