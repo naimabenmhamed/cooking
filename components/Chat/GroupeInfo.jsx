@@ -6,7 +6,8 @@ import {
   FlatList, 
   TouchableOpacity, 
   Image,
-  Alert 
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Firestore from '@react-native-firebase/firestore';
@@ -16,38 +17,66 @@ const GroupInfo = ({ route, navigation }) => {
   const { groupId } = route.params;
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const currentUser = auth().currentUser;
 
   useEffect(() => {
-    const unsubscribeGroup = Firestore()
+    const fetchGroupData = async () => {
+      try {
+        const groupDoc = await Firestore().collection('groups').doc(groupId).get();
+        
+        if (!groupDoc.exists) {
+          Alert.alert("Erreur", "Ce groupe n'existe pas");
+          navigation.goBack();
+          return;
+        }
+
+        const groupData = groupDoc.data();
+        setGroup(groupData);
+
+        // Récupération des membres avec leurs vrais noms
+        const memberPromises = groupData.members.map(memberId => 
+          Firestore().collection('users').doc(memberId).get()
+        );
+
+        const memberSnapshots = await Promise.all(memberPromises);
+        const membersData = memberSnapshots
+          .filter(doc => doc.exists)
+          .map(doc => {
+            const userData = doc.data();
+            return {
+              id: doc.id,
+              name: userData.nom || userData.displayName || 'Membre', // Utilise 'nom' ou 'displayName'
+              email: userData.email,
+              photoURL: userData.photoURL
+            };
+          });
+
+        setMembers(membersData);
+      } catch (error) {
+        console.error("Error fetching group data:", error);
+        Alert.alert("Erreur", "Impossible de charger les informations du groupe");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroupData();
+
+    const unsubscribe = Firestore()
       .collection('groups')
       .doc(groupId)
-      .onSnapshot((doc) => {
+      .onSnapshot(doc => {
         if (doc.exists) {
           setGroup(doc.data());
         }
       });
 
-    const unsubscribeMembers = Firestore()
-      .collection('users')
-      .where('groups', 'array-contains', groupId)
-      .onSnapshot((snapshot) => {
-        const membersData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setMembers(membersData);
-      });
-
-    return () => {
-      unsubscribeGroup();
-      unsubscribeMembers();
-    };
-  }, [groupId]);
+    return () => unsubscribe();
+  }, [groupId, navigation]);
 
   const leaveGroup = async () => {
     try {
-      // Supprimer l'utilisateur du groupe
       await Firestore()
         .collection('groups')
         .doc(groupId)
@@ -55,7 +84,6 @@ const GroupInfo = ({ route, navigation }) => {
           members: Firestore.FieldValue.arrayRemove(currentUser.uid)
         });
 
-      // Supprimer le groupe de la liste des groupes de l'utilisateur
       await Firestore()
         .collection('users')
         .doc(currentUser.uid)
@@ -71,6 +99,10 @@ const GroupInfo = ({ route, navigation }) => {
     }
   };
 
+  const handleAddMember = () => {
+    navigation.navigate('AddMember', { groupId });
+  };
+
   const renderMember = ({ item }) => (
     <TouchableOpacity style={styles.memberItem}>
       {item.photoURL ? (
@@ -78,26 +110,28 @@ const GroupInfo = ({ route, navigation }) => {
       ) : (
         <View style={[styles.avatar, styles.avatarPlaceholder]}>
           <Text style={styles.avatarText}>
-            {item.displayName?.charAt(0)?.toUpperCase() || '?'}
+            {item.name.charAt(0).toUpperCase()}
           </Text>
         </View>
       )}
       <View style={styles.memberInfo}>
-        <Text style={styles.memberName}>{item.displayName || 'Utilisateur'}</Text>
+        <Text style={styles.memberName}>{item.name}</Text>
         <Text style={styles.memberEmail}>{item.email}</Text>
       </View>
       {item.id === group?.createdBy && (
         <View style={styles.adminBadge}>
+          <Icon name="shield-checkmark" size={16} color="white" />
           <Text style={styles.adminText}>Admin</Text>
         </View>
       )}
     </TouchableOpacity>
   );
 
-  if (!group) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Chargement...</Text>
+        <ActivityIndicator size="large" color="#1E90FF" />
+        <Text style={styles.loadingText}>Chargement des informations...</Text>
       </View>
     );
   }
@@ -123,16 +157,30 @@ const GroupInfo = ({ route, navigation }) => {
           </View>
         )}
         <Text style={styles.groupName}>{group.name}</Text>
-        <Text style={styles.memberCount}>{members.length} membres</Text>
+        <Text style={styles.memberCount}>{members.length} membre{members.length !== 1 ? 's' : ''}</Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Membres</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Membres du groupe</Text>
+          {group.createdBy === currentUser.uid && (
+            <TouchableOpacity onPress={handleAddMember}>
+              <Icon name="person-add" size={24} color="#1E90FF" />
+            </TouchableOpacity>
+          )}
+        </View>
+        
         <FlatList
           data={members}
           renderItem={renderMember}
           keyExtractor={item => item.id}
-          contentContainerStyle={styles.membersList}
+          contentContainerStyle={members.length === 0 && styles.emptyList}
+          ListEmptyComponent={
+            <View style={styles.emptyMembers}>
+              <Icon name="people-outline" size={40} color="#ccc" />
+              <Text style={styles.emptyText}>Aucun membre dans ce groupe</Text>
+            </View>
+          }
         />
       </View>
 
@@ -166,6 +214,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    color: '#666',
   },
   header: {
     flexDirection: 'row',
@@ -205,26 +257,45 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 5,
+    textAlign: 'center',
   },
   memberCount: {
     color: '#666',
+    fontSize: 16,
   },
   section: {
+    flex: 1,
     padding: 16,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
     color: '#333',
   },
-  membersList: {
-    paddingBottom: 20,
+  emptyList: {
+    flex: 1,
+  },
+  emptyMembers: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    marginTop: 8,
+    color: '#888',
+    fontSize: 16,
   },
   memberItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#f5f5f5',
   },
@@ -256,14 +327,18 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   adminBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#1E90FF',
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 8,
   },
   adminText: {
     color: 'white',
     fontSize: 12,
+    marginLeft: 4,
   },
   leaveButton: {
     margin: 20,
@@ -275,6 +350,7 @@ const styles = StyleSheet.create({
   leaveButtonText: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 16,
   },
 });
 
