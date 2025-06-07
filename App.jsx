@@ -17,6 +17,9 @@ import Chat2p from "./components/Chat/Chat2p";
 import Toast from 'react-native-toast-message';
 import ToNotes from "./components/Main/Notes";
 import AfficherNotes from "./components/Main/AfficherNotes"
+import CreateGroup from "./components/Chat/CreateGroupe";
+import GroupChat from "./components/Chat/GroupeChat";
+import GroupInfo from "./components/Chat/GroupeInfo";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -111,6 +114,9 @@ export default function App() {
          <Stack.Screen name="Chat2p" component={Chat2p} options={{ headerShown: false }} />
          <Stack.Screen name="Notes" component={ToNotes} options={{ headerShown: false }} />
          <Stack.Screen name="AfficherNotes" component={AfficherNotes} options={{ headerShown: false }} />
+           <Stack.Screen name="CreateGroup" component={CreateGroup} options={{ title: 'Créer un groupe' }} />
+           <Stack.Screen name="GroupChat" component={GroupChat} options={{ title: 'Créer un groupe' }} />
+           <Stack.Screen name="GroupInfo" component={GroupInfo} options={{ title: 'Créer un groupe' }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />

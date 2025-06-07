@@ -53,11 +53,11 @@ const handleDeleteText = async (id) => {
     <Text style={styles.label}>Titre</Text>
     <Text style={styles.text}>{note.title}</Text>
 
-    <Text style={styles.label}>Ingrédients</Text>
+    <Text style={styles.label}>Leçon</Text>
     <Text style={styles.text}>{note.ingredient || 'Aucun ingrédient'}</Text>
 
-    <Text style={styles.label}>Description</Text>
-    <Text style={styles.text}>{note.description || 'Aucune description'}</Text>
+    {/* <Text style={styles.label}>Description</Text>
+    <Text style={styles.text}>{note.description || 'Aucune description'}</Text> */}
 
     {note.visibility !== 'public' && (
     <TouchableOpacity style={styles.button} onPress={handlePublish}>

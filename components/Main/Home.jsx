@@ -102,7 +102,7 @@ const renderItem = ({ item }) => {
       <Text style={styles.noteTitle}>{item.title}</Text>
       <Text style={styles.noteContent}>{item.description}</Text>
       {item.ingredient && (
-        <Text style={styles.noteIngredient}>Ingrédients: {item.ingredient}</Text>
+        <Text style={styles.noteIngredient}>{item.ingredient}</Text>
       )}
 
       {/* Bouton Like */}

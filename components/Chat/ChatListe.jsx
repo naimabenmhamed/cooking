@@ -20,42 +20,59 @@ const ChatList = () => {
   const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
   const currentUser = auth().currentUser;
+  const [groups, setGroups] = useState([]);
+const combinedList = [...groups, ...friends];
 
+  const goToCreateGroup = () => {
+    navigation.navigate('CreateGroup'); // écran pour créer un groupe (à créer)
+  };
   useEffect(() => {
-    if (!currentUser) return;
+  if (!currentUser) return;
 
-    const unsubscribe = firestore()
-      .collection('friends')
-      .where('users', 'array-contains', currentUser.uid)
-      .onSnapshot(async (snapshot) => {
-        const friendsData = await Promise.all(
-          snapshot.docs.map(async (doc) => {
-            const data = doc.data();
-            const friendId = data.users.find(uid => uid !== currentUser.uid);
-            
-            // Récupérer les infos de l'ami
-            const userDoc = await firestore().collection('users').doc(friendId).get();
-            if (userDoc.exists) {
-              return {
-                id: friendId,
-                name: userDoc.data().nom || userDoc.data().displayName || 'Ami',
-                avatar: userDoc.data().photoURL || null,
-                isOnline: userDoc.data().isOnline || false
-              };
-            }
-            return null;
-          })
-        );
+  const unsubscribeFriends = firestore()
+    .collection('friends')
+    .where('users', 'array-contains', currentUser.uid)
+    .onSnapshot(async (snapshot) => {
+      const friendsData = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          const data = doc.data();
+          const friendId = data.users.find(uid => uid !== currentUser.uid);
+          const userDoc = await firestore().collection('users').doc(friendId).get();
+          if (userDoc.exists) {
+            return {
+              id: friendId,
+              name: userDoc.data().nom || userDoc.data().displayName || 'Ami',
+              avatar: userDoc.data().photoURL || null,
+              isOnline: userDoc.data().isOnline || false,
+              isGroup: false
+            };
+          }
+          return null;
+        })
+      );
+      setFriends(friendsData.filter(f => f !== null));
+      setLoading(false);
+    });
 
-        setFriends(friendsData.filter(friend => friend !== null));
-        setLoading(false);
-      }, error => {
-        console.error("Error fetching friends:", error);
-        setLoading(false);
-      });
+  const unsubscribeGroups = firestore()
+    .collection('groups')
+    .where('members', 'array-contains', currentUser.uid)
+    .onSnapshot(snapshot => {
+      const groupData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name || 'Groupe',
+        avatar: doc.data().avatar || null,
+        isGroup: true
+      }));
+      setGroups(groupData);
+    });
 
-    return () => unsubscribe();
-  }, [currentUser?.uid]);
+  return () => {
+    unsubscribeFriends();
+    unsubscribeGroups();
+  };
+}, [currentUser?.uid]);
+
 
   const startChat = (friend) => {
     navigation.navigate('Chat2p', {
@@ -65,34 +82,49 @@ const ChatList = () => {
     });
   };
 
-  const renderFriend = ({ item }) => (
-    <TouchableOpacity
-      style={styles.friendItem}
-      onPress={() => startChat(item)}
-    >
-      <View style={styles.avatarContainer}>
-        {item.avatar ? (
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarPlaceholder]}>
-            <Text style={styles.avatarText}>
-              {item.name.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
+  const renderItem = ({ item }) => (
+  <TouchableOpacity
+    style={styles.friendItem}
+    onPress={() => {
+      if (item.isGroup) {
+        navigation.navigate('GroupChat', {
+          groupId: item.id,
+          groupName: item.name
+        });
+      } else {
+        startChat(item);
+      }
+    }}
+  >
+    <View style={styles.avatarContainer}>
+      {item.avatar ? (
+        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+      ) : (
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={styles.avatarText}>
+            {item.name.charAt(0).toUpperCase()}
+          </Text>
+        </View>
+      )}
+      {!item.isGroup && (
         <View style={item.isOnline ? styles.onlineBadge : styles.offlineBadge} />
-      </View>
-      
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.name}</Text>
-        <Text style={styles.friendStatus}>
-          {item.isOnline ? 'En ligne' : 'Hors ligne'}
-        </Text>
-      </View>
-      
-      <Icon name="chatbox-ellipses-outline" size={24} color="#1E90FF" />
-    </TouchableOpacity>
-  );
+      )}
+    </View>
+
+    <View style={styles.friendInfo}>
+      <Text style={styles.friendName}>{item.name}</Text>
+      <Text style={styles.friendStatus}>
+        {item.isGroup ? 'Groupe' : (item.isOnline ? 'En ligne' : 'Hors ligne')}
+      </Text>
+    </View>
+
+    <Icon
+      name={item.isGroup ? 'people-outline' : 'chatbox-ellipses-outline'}
+      size={24}
+      color="#1E90FF"
+    />
+  </TouchableOpacity>
+);
 
   if (loading) {
     return (
@@ -106,26 +138,35 @@ const ChatList = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mes Amis</Text>
+         <TouchableOpacity 
+          style={styles.createGroupButton} 
+          onPress={goToCreateGroup}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Icon name="people-outline" size={24} color="#1E90FF" />
+          <Text style={styles.createGroupText}>GP</Text>
+        </TouchableOpacity>
         <Text style={styles.subtitle}>
           {friends.length} ami{friends.length !== 1 ? 's' : ''}
         </Text>
       </View>
       
-     <FlatList
-  data={friends}
-  renderItem={renderFriend}
+    <FlatList
+  data={combinedList}
+  renderItem={renderItem}
   keyExtractor={item => item.id}
-  contentContainerStyle={friends.length === 0 ? styles.emptyContainer : null}
+  contentContainerStyle={combinedList.length === 0 ? styles.emptyContainer : null}
   ListEmptyComponent={
     <View style={styles.emptyContainer}>
       <Icon name="people-outline" size={60} color="#ccc" />
-      <Text style={styles.emptyText}>Aucun ami trouvé</Text>
+      <Text style={styles.emptyText}>Aucun contact ou groupe</Text>
       <Text style={styles.emptySubText}>
-        Ajoutez des amis pour commencer à chatter
+        Ajoutez des amis ou rejoignez un groupe pour commencer à chatter
       </Text>
     </View>
   }
 />
+
       
       <TouchableOpacity 
         style={styles.addButton}
@@ -250,6 +291,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 5,
   },
+  createGroupButton: {
+  position: 'absolute',
+  
+  top: 16,
+  alignItems: 'center',
+},
+createGroupText: {
+  color: '#1E90FF',
+  fontWeight: '600',
+  marginLeft: 5,
+},
+
 });
 
 export default ChatList;
