@@ -1,5 +1,5 @@
 // Home.js - Composant pour afficher les notes publiques aléatoires
-import { StyleSheet, View, Text, TextInput, Alert, TouchableOpacity, FlatList, ActivityIndicator } from "react-native";
+import { StyleSheet, View, Text, TextInput, Alert, TouchableOpacity, FlatList, ActivityIndicator,Image } from "react-native";
 import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import React, { useEffect, useState } from "react";
@@ -23,30 +23,46 @@ export default function Home({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = firestore()
-      .collection('notes')
-      .where('visibility', '==', 'public')
-      .onSnapshot(snapshot => {
-        let fetchedNotes = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+useEffect(() => {
+  const unsubscribe = firestore()
+    .collection('notes')
+    .where('visibility', '==', 'public')
+    .onSnapshot(async (snapshot) => {
+      let fetchedNotes = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
 
-        // Mélanger les notes aléatoirement
-        fetchedNotes = fetchedNotes.sort(() => 0.5 - Math.random());
+      // Enrichir chaque note avec le profil utilisateur
+      const enrichedNotes = await Promise.all(
+        fetchedNotes.map(async (note) => {
+          if (note.userId) {
+            try {
+              const userDoc = await firestore().collection('users').doc(note.userId).get();
+              const userData = userDoc.data();
+              return {
+                ...note,
+                photoProfil: userData?.photoProfil || null,
+                userName: userData?.nom || "Utilisateur inconnu",
+              };
+            } catch (err) {
+              console.error('Erreur récupération profil:', err);
+            }
+          }
+          return note;
+        })
+      );
 
-        setNotes(fetchedNotes);
-        setLoading(false);
-      }, error => {
-        console.error('Erreur lors de l\'écoute des notes :', error);
-        Alert.alert('Erreur', 'Impossible de charger les notes publiques');
-        setLoading(false);
-      });
+      setNotes(enrichedNotes.sort(() => 0.5 - Math.random()));
+      setLoading(false);
+    }, error => {
+      console.error('Erreur lors de l\'écoute des notes :', error);
+      Alert.alert('Erreur', 'Impossible de charger les notes publiques');
+      setLoading(false);
+    });
 
-    // Nettoyage du listener lors du démontage du composant
-    return () => unsubscribe();
-  }, []);
+  return () => unsubscribe();
+}, []);
 
   const renderItem = ({ item }) => {
     const currentUser = auth().currentUser;
@@ -110,7 +126,21 @@ export default function Home({ navigation }) {
 
     return (
       <TouchableOpacity onPress={() => openNote(item)} style={styles.noteItem}>
-        <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
+        <View style={styles.userInfo}>
+  {item.photoProfil ? (
+  <Image
+    source={{ uri: item.photoProfil.startsWith('data:image') || item.photoProfil.startsWith('http') 
+      ? item.photoProfil 
+      : `data:image/jpeg;base64,${item.photoProfil}` }}
+    style={styles.avatar}
+  />
+) : (
+  <Icon name="person-circle-outline" size={30} color="#3B82F6" />
+)}
+
+  <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
+</View>
+
         <Text style={styles.noteTitle}>{item.title}</Text>
         {item.ingredient && (
           <Text style={styles.noteIngredient}>{item.leçon}</Text>
@@ -214,6 +244,7 @@ const styles = StyleSheet.create({
     color: '#3B82F6',
     marginBottom: 5,
     fontSize: 14,
+    
   },
   noteTitle: {
     fontWeight: '600',
@@ -243,6 +274,18 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontSize: 14,
   },
+  userInfo: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 5,
+},
+avatar: {
+  width: 30,
+  height: 30,
+  borderRadius: 15,
+  marginRight: 10,
+},
+
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
