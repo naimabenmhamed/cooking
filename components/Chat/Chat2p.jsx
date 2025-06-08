@@ -98,7 +98,8 @@ const Chat2p = ({ route , navigation }) => {
       const sharedNoteData = {
         id: note.id || '',
         title: note.title || 'Sans titre',
-        description: note.description || note.leçon || '',
+        Leçon: note.leçon, 
+        // || note.leçon || '',
         visibility: note.visibility || 'private',
         sharedBy: currentUser.uid,
         sharedByName: currentUser.displayName || 'Utilisateur',
@@ -325,7 +326,7 @@ const Chat2p = ({ route , navigation }) => {
     // 1. Affiche d'abord l'alerte rapide
     Alert.alert(
       sharedNote.title,
-      `${sharedNote.description}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
+      `${sharedNote.leçon}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
       [
         { 
           text: "Voir détails", 
@@ -335,7 +336,7 @@ const Chat2p = ({ route , navigation }) => {
               note: {
                 id: sharedNote.id,
                 title: sharedNote.title,
-                description: sharedNote.description,
+                leçon: sharedNote.leçon,
                 ingredient: sharedNote.ingredient || '',
                 createdAt: sharedNote.createdAt,
                 visibility: sharedNote.visibility,
@@ -446,7 +447,7 @@ const Chat2p = ({ route , navigation }) => {
                     {note.title}
                   </Text>
                   <Text style={styles.noteDescription} numberOfLines={2}>
-                    {note.description}
+                    {note.leçon}
                   </Text>
                   <View style={styles.noteFooter}>
                     <Text style={styles.noteDate}>
