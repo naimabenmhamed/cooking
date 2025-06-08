@@ -23,6 +23,26 @@ const AddMember = ({ route, navigation }) => {
   const [groupMembers, setGroupMembers] = useState([]);
   const currentUser = auth().currentUser;
 
+  // Fonction pour gérer les différents formats d'avatar (identique à ChatList)
+  const getAvatarUrl = (userData) => {
+    let avatarUrl = null;
+    if (userData?.photoURL) {
+      avatarUrl = userData.photoURL;
+    } else if (userData?.photoProfil) {
+      // Si photoProfil est une string base64
+      if (userData.photoProfil.startsWith('data:image')) {
+        avatarUrl = userData.photoProfil;
+      } else if (userData.photoProfil.startsWith('/9j/')) {
+        avatarUrl = `data:image/jpeg;base64,${userData.photoProfil}`;
+      } else {
+        avatarUrl = userData.photoProfil;
+      }
+    } else if (userData?.avatar) {
+      avatarUrl = userData.avatar;
+    }
+    return avatarUrl;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -37,12 +57,12 @@ const AddMember = ({ route, navigation }) => {
         const allUsers = [];
         usersSnapshot.forEach(doc => {
           const userData = doc.data();
-          if (doc.id !== currentUser.uid && !groupData.members.includes(doc.id)) {
+          if (doc.id !== currentUser.uid && !groupData.members?.includes(doc.id)) {
             allUsers.push({
               id: doc.id,
               name: userData.nom || userData.displayName || 'Utilisateur',
               email: userData.email,
-             photoProfil: userData.photoProfil
+              avatar: getAvatarUrl(userData) // Utiliser la fonction pour récupérer l'avatar
             });
           }
         });
@@ -66,8 +86,7 @@ const AddMember = ({ route, navigation }) => {
     } else {
       const filtered = users.filter(user =>
         user.name.toLowerCase().includes(searchText.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchText.toLowerCase())||
-        user.photoProfil.toLowerCase().includes(searchText.toLowerCase())
+        user.email.toLowerCase().includes(searchText.toLowerCase())
       );
       setFilteredUsers(filtered);
     }
@@ -92,8 +111,8 @@ const AddMember = ({ route, navigation }) => {
         });
 
       // Mettre à jour la liste des utilisateurs affichés
-      setUsers(users.filter(user => user.id !== userId));
-      setFilteredUsers(filteredUsers.filter(user => user.id !== userId));
+      setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
+      setFilteredUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
 
       Alert.alert("Succès", "Membre ajouté au groupe");
     } catch (error) {
@@ -103,13 +122,24 @@ const AddMember = ({ route, navigation }) => {
   };
 
   const renderUser = ({ item }) => (
-    <View style={styles.userItem}>
-      {item.photoProfil? (
-        <Image source={{ uri: item.photoProfil }} style={styles.avatar} />
+    <TouchableOpacity 
+      style={styles.userItem}
+      onPress={() => addUserToGroup(item.id)}
+    >
+      {item.avatar ? (
+        <Image 
+          source={{ uri: item.avatar }} 
+          style={styles.avatar}
+          onError={(e) => {
+            console.log("Erreur de chargement de l'avatar:", e.nativeEvent.error);
+            // Vous pourriez ici mettre à jour l'état pour afficher l'avatar par défaut
+          }}
+          resizeMode="cover"
+        />
       ) : (
         <View style={[styles.avatar, styles.avatarPlaceholder]}>
           <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
+            {item.name ? item.name.charAt(0).toUpperCase() : '?'}
           </Text>
         </View>
       )}
@@ -117,13 +147,8 @@ const AddMember = ({ route, navigation }) => {
         <Text style={styles.userName}>{item.name}</Text>
         <Text style={styles.userEmail}>{item.email}</Text>
       </View>
-      <TouchableOpacity 
-        style={styles.addButton}
-        onPress={() => addUserToGroup(item.id)}
-      >
-        <Icon name="person-add" size={24} color="#1E90FF" />
-      </TouchableOpacity>
-    </View>
+      <Icon name="person-add" size={24} color="#1E90FF" />
+    </TouchableOpacity>
   );
 
   if (loading) {
@@ -246,6 +271,7 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     marginRight: 12,
+    backgroundColor: '#f0f0f0',
   },
   avatarPlaceholder: {
     backgroundColor: '#1E90FF',
@@ -263,13 +289,11 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
     color: '#666',
-  },
-  addButton: {
-    padding: 8,
   },
 });
 

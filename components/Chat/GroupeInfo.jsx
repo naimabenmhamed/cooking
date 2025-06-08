@@ -238,7 +238,8 @@ const GroupInfo = ({ route, navigation }) => {
             );
           }}
         >
-          <Text style={styles.leaveButtonText}>Quitter le groupe</Text>
+          <Icon name="log-out-outline" size={19} color="#999" />
+          
         </TouchableOpacity>
       )}
     </View>
@@ -381,11 +382,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   leaveButton: {
-    margin: 20,
-    padding: 15,
-    backgroundColor: '#ff4444',
-    borderRadius: 10,
+   backgroundColor: '#E0FFFF',
+    padding: 5,
+    borderRadius: 15,
     alignItems: 'center',
+    marginTop: 5,
+    width: '20%',
   },
   deleteButton: {
     backgroundColor: '#E0FFFF',
