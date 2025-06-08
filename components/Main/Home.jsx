@@ -11,8 +11,8 @@ export default function Home({ navigation }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const openNote = (note) => {
-  navigation.navigate('AfficherNotes', { note, fromHome: true });
-};
+    navigation.navigate('AfficherNotes', { note, fromHome: true });
+  };
 
   const handleLogout = async () => {
     try {
@@ -24,124 +24,138 @@ export default function Home({ navigation }) {
   };
 
   useEffect(() => {
-  const unsubscribe = firestore()
-    .collection('notes')
-    .where('visibility', '==', 'public')
-    .onSnapshot(snapshot => {
-      let fetchedNotes = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+    const unsubscribe = firestore()
+      .collection('notes')
+      .where('visibility', '==', 'public')
+      .onSnapshot(snapshot => {
+        let fetchedNotes = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
 
-      // Mélanger les notes aléatoirement
-      fetchedNotes = fetchedNotes.sort(() => 0.5 - Math.random());
+        // Mélanger les notes aléatoirement
+        fetchedNotes = fetchedNotes.sort(() => 0.5 - Math.random());
 
-      setNotes(fetchedNotes);
-      setLoading(false);
-    }, error => {
-      console.error('Erreur lors de l’écoute des notes :', error);
-      Alert.alert('Erreur', 'Impossible de charger les notes publiques');
-      setLoading(false);
-    });
-
-  // Nettoyage du listener lors du démontage du composant
-  return () => unsubscribe();
-}, []);
-
-
-
-const renderItem = ({ item }) => {
-  const currentUser = auth().currentUser;
-  const hasLiked = item.likes?.includes(currentUser?.uid);
-
-  const toggleLike = async () => {
-    if (!currentUser) return;
-
-    const noteRef = firestore().collection('notes').doc(item.id);
-
-    try {
-      await firestore().runTransaction(async (transaction) => {
-        const doc = await transaction.get(noteRef);
-        if (!doc.exists) return;
-
-        const data = doc.data();
-        const likes = data.likes || [];
-
-        if (likes.includes(currentUser.uid)) {
-          // retirer like
-          transaction.update(noteRef, {
-            likes: firestore.FieldValue.arrayRemove(currentUser.uid),
-          });
-        } else {
-          // ajouter like
-          transaction.update(noteRef, {
-            likes: firestore.FieldValue.arrayUnion(currentUser.uid),
-          });
-        }
+        setNotes(fetchedNotes);
+        setLoading(false);
+      }, error => {
+        console.error('Erreur lors de l\'écoute des notes :', error);
+        Alert.alert('Erreur', 'Impossible de charger les notes publiques');
+        setLoading(false);
       });
 
-      // mettre à jour localement
-      setNotes(prev =>
-        prev.map(n =>
-          n.id === item.id
-            ? {
-                ...n,
-                likes: hasLiked
-                  ? n.likes.filter(id => id !== currentUser.uid)
-                  : [...(n.likes || []), currentUser.uid],
-              }
-            : n
-        )
-      );
-    } catch (error) {
-      console.error("Erreur lors du like :", error);
-    }
+    // Nettoyage du listener lors du démontage du composant
+    return () => unsubscribe();
+  }, []);
+
+  const renderItem = ({ item }) => {
+    const currentUser = auth().currentUser;
+    const hasLiked = item.likes?.includes(currentUser?.uid);
+
+    const toggleLike = async () => {
+      if (!currentUser) {
+        Alert.alert('Erreur', 'Vous devez être connecté pour aimer une note');
+        return;
+      }
+
+      const noteRef = firestore().collection('notes').doc(item.id);
+
+      try {
+        // Méthode alternative sans transaction pour éviter les problèmes de permissions
+        const currentLikes = item.likes || [];
+        let newLikes;
+
+        if (hasLiked) {
+          // Retirer le like
+          newLikes = currentLikes.filter(uid => uid !== currentUser.uid);
+        } else {
+          // Ajouter le like
+          newLikes = [...currentLikes, currentUser.uid];
+        }
+
+        // Mise à jour directe du document
+        await noteRef.update({
+          likes: newLikes
+        });
+
+        // Mise à jour locale immédiate pour une meilleure UX
+        setNotes(prev =>
+          prev.map(n =>
+            n.id === item.id
+              ? { ...n, likes: newLikes }
+              : n
+          )
+        );
+
+        console.log('Like mis à jour avec succès');
+
+      } catch (error) {
+        console.error("Erreur lors du like :", error);
+        
+        // Messages d'erreur spécifiques
+        if (error.code === 'firestore/permission-denied') {
+          Alert.alert(
+            'Permission refusée', 
+            'Vous n\'avez pas les permissions nécessaires pour aimer cette note. Vérifiez les règles Firestore.'
+          );
+        } else if (error.code === 'firestore/not-found') {
+          Alert.alert('Erreur', 'Cette note n\'existe plus');
+        } else if (error.code === 'firestore/offline') {
+          Alert.alert('Erreur', 'Vous êtes hors ligne. Vérifiez votre connexion internet.');
+        } else {
+          Alert.alert('Erreur', `Impossible d'aimer cette note: ${error.message}`);
+        }
+      }
+    };
+
+    return (
+      <TouchableOpacity onPress={() => openNote(item)} style={styles.noteItem}>
+        <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
+        <Text style={styles.noteTitle}>{item.title}</Text>
+        {item.ingredient && (
+          <Text style={styles.noteIngredient}>{item.leçon}</Text>
+        )}
+
+        {/* Bouton Like avec meilleure gestion */}
+        <TouchableOpacity 
+          onPress={toggleLike} 
+          style={styles.likeContainer}
+          disabled={!auth().currentUser} // Désactiver si pas connecté
+        >
+          <Icon 
+            name={hasLiked ? "heart" : "heart-outline"} 
+            size={18} 
+            color={hasLiked ? "red" : "#6B7280"} 
+          />
+          <Text style={styles.likeCount}>{item.likes?.length || 0}</Text>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    );
   };
 
-  return (
-    <TouchableOpacity onPress={() => openNote(item)} style={styles.noteItem}>
-      <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
-      <Text style={styles.noteTitle}>{item.title}</Text>
-      {/* <Text style={styles.noteContent}>{item.description}</Text> */}
-      {item.ingredient && (
-        <Text style={styles.noteIngredient}>{item.leçon}</Text>
-      )}
-
-      {/* Bouton Like */}
-      <TouchableOpacity onPress={toggleLike} style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-        <Icon name={hasLiked ? "heart" : "heart-outline"} size={18} color="red" />
-        <Text style={{ marginLeft: 5 }}>{item.likes?.length || 0}</Text>
-      </TouchableOpacity>
-    </TouchableOpacity>
+  const filteredNotes = notes.filter(note =>
+    note.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-};
-const filteredNotes = notes.filter(note =>
-  note.title?.toLowerCase().includes(searchQuery.toLowerCase())
-);
-
-
 
   return (
     <View style={styles.container}>
       <TextInput
-  placeholder="Trouver le titre de la note"
-  placeholderTextColor="#999"
-  style={styles.input}
-  value={searchQuery}
-  onChangeText={setSearchQuery}
-/>
-
+        placeholder="Trouver le titre de la note"
+        placeholderTextColor="#999"
+        style={styles.input}
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+      />
 
       {loading ? (
         <ActivityIndicator size="large" color="#3B82F6" />
       ) : notes.length > 0 ? (
-       <FlatList
-  data={filteredNotes}
-  keyExtractor={(item) => item.id}
-  renderItem={renderItem}
-  showsVerticalScrollIndicator={false}
-/>
-
+        <FlatList
+          data={filteredNotes}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          showsVerticalScrollIndicator={false}
+        />
       ) : (
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>Aucune note publique disponible</Text>
@@ -217,6 +231,17 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 12,
     marginTop: 5,
+  },
+  likeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 5,
+  },
+  likeCount: {
+    marginLeft: 5,
+    color: '#6B7280',
+    fontSize: 14,
   },
   emptyContainer: {
     flex: 1,
