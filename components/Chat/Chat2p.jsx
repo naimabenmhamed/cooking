@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef , useCallback, useMemo} from 'react';
 import { 
   View, 
   Text, 
@@ -16,26 +16,25 @@ import Firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const Chat2p = ({ route, navigation }) => {
+const Chat2p = ({ route , navigation }) => {
   const { recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [userNotes, setUserNotes] = useState([]);
   const [isSharing, setIsSharing] = useState(false);
-  const [isRecipientOnline, setIsRecipientOnline] = useState(false);
-  
   const currentUser = auth().currentUser;
   const flatListRef = useRef(null);
 
-  // Mémoisation du chatId pour éviter les recalculs
-  const chatId = useMemo(() => {
+  const getChatId = () => {
     const ids = [currentUser.uid, recipientId].sort();
     return `chat_${ids.join('_')}`;
-  }, [currentUser.uid, recipientId]);
+  };
 
-  // Fonction de défilement optimisée avec useCallback
-  const scrollToBottom = useCallback(() => {
+  const chatId = getChatId();
+
+  // Fonction pour faire défiler vers le bas de manière sûre
+  const scrollToBottom = () => {
     if (flatListRef.current) {
       setTimeout(() => {
         try {
@@ -45,29 +44,28 @@ const Chat2p = ({ route, navigation }) => {
         }
       }, 100);
     }
-  }, []);
+  };
 
-  // Fonction pour récupérer les notes (optimisée)
-  const fetchUserNotes = useCallback(async () => {
+  // Fonction pour récupérer les notes de l'utilisateur
+  const fetchUserNotes = async () => {
     try {
       const querySnapshot = await Firestore()
         .collection('notes')
         .where('userId', '==', currentUser.uid)
-        .orderBy('createdAt', 'desc')
         .get();
 
       const notes = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })).sort((a, b) => b.createdAt - a.createdAt);
 
       setUserNotes(notes);
     } catch (error) {
       console.error("Erreur lors de la récupération des notes:", error);
     }
-  }, [currentUser.uid]);
+  };
 
-  // Fonction de partage de note optimisée
+  // Fonction pour partager une note - VERSION CORRIGÉE
   const shareNote = useCallback(async (note) => {
     if (isSharing) return;
     setIsSharing(true);
@@ -140,14 +138,15 @@ const Chat2p = ({ route, navigation }) => {
     }
   }, [isSharing, chatId, currentUser.uid, currentUser.displayName, recipientId, recipientName]);
 
-  // Initialisation du chat optimisée
-  const initializeChat = useCallback(async () => {
+
+  const initializeChat = async () => {
     try {
       const chatRef = Firestore().collection('chats').doc(chatId);
       const chatDoc = await chatRef.get();
 
       if (!chatDoc.exists) {
         const participants = [currentUser.uid, recipientId].sort();
+
         await chatRef.set({
           participants,
           participantNames: {
@@ -168,62 +167,50 @@ const Chat2p = ({ route, navigation }) => {
       console.error("Chat initialization error:", error);
       Alert.alert("Error", "Could not initialize chat");
     }
-  }, [chatId, currentUser.uid, currentUser.displayName, recipientId, recipientName]);
+  };
 
-  // Marquer les messages comme lus (optimisé)
- const markMessagesAsRead = useCallback(async () => {
-  try {
-    const messagesRef = Firestore()
-      .collection('chats')
-      .doc(chatId)
-      .collection('messages');
+  const markMessagesAsRead = async () => {
+    try {
+      const messagesRef = Firestore()
+        .collection('chats')
+        .doc(chatId)
+        .collection('messages');
 
-    // First query: Messages not sent by current user
-    const sentByOthers = await messagesRef
-      .where('senderId', '!=', currentUser.uid)
-      .limit(50)
-      .get();
+      const snapshot = await messagesRef
+        .where('readBy', 'not-in', [currentUser.uid])
+        .get();
 
-    // Second query: Messages where current user is not in readBy
-    const notReadByUser = await messagesRef
-      .where('readBy', 'not-in', [[currentUser.uid]])
-      .limit(50)
-      .get();
+      if (!snapshot.empty) {
+        const batch = Firestore().batch();
 
-    // Combine results and remove duplicates
-    const allDocs = [...sentByOthers.docs, ...notReadByUser.docs];
-    const uniqueDocs = allDocs.filter((doc, index, self) => 
-      index === self.findIndex((d) => d.id === doc.id)
-    );
-
-    if (uniqueDocs.length > 0) {
-      const batch = Firestore().batch();
-      uniqueDocs.forEach((doc) => {
-        batch.update(doc.ref, {
-          readBy: Firestore.FieldValue.arrayUnion(currentUser.uid)
+        snapshot.forEach((doc) => {
+          batch.update(doc.ref, {
+            readBy: Firestore.FieldValue.arrayUnion(currentUser.uid)
+          });
         });
-      });
-      await batch.commit();
-    }
-  } catch (error) {
-    console.error("Mark messages as read error:", error);
-  }
-}, [chatId, currentUser.uid]);
 
-  // Configuration du listener de chat optimisée
-  const setupChatListener = useCallback(() => {
+        await batch.commit();
+      }
+    } catch (error) {
+      console.error("Mark messages as read error:", error);
+    }
+  };
+
+  const setupChatListener = () => {
     return Firestore()
       .collection('chats')
       .doc(chatId)
       .collection('messages')
       .orderBy('createdAt', 'asc')
-      .limit(100) // Limiter le nombre de messages chargés
       .onSnapshot(
         (snapshot) => {
-          const msgs = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
+          const msgs = [];
+          snapshot.forEach((doc) => {
+            msgs.push({
+              id: doc.id,
+              ...doc.data()
+            });
+          });
           setMessages(msgs);
           markMessagesAsRead();
           scrollToBottom();
@@ -237,9 +224,10 @@ const Chat2p = ({ route, navigation }) => {
           }
         }
       );
-  }, [chatId, markMessagesAsRead, scrollToBottom]);
+  };
 
-  // Listener pour le statut en ligne du destinataire
+  const [isRecipientOnline, setIsRecipientOnline] = useState(false);
+
   useEffect(() => {
     const unsubscribe = Firestore()
       .collection('users')
@@ -251,86 +239,76 @@ const Chat2p = ({ route, navigation }) => {
         }
       });
 
-    return unsubscribe;
+    return () => unsubscribe();
   }, [recipientId]);
 
-  // Effet principal pour initialiser le chat
   useEffect(() => {
     if (!currentUser) return;
 
-    let unsubscribe;
-    
     const init = async () => {
       await initializeChat();
-      unsubscribe = setupChatListener();
+      return setupChatListener();
     };
 
-    init();
+    let unsubscribe;
+    init().then((unsub) => {
+      unsubscribe = unsub;
+    });
 
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [currentUser, initializeChat, setupChatListener]);
+  }, [currentUser, chatId]);
 
-  // Fonction d'envoi de message optimisée
-  const sendMessage = useCallback(async () => {
+  const sendMessage = async () => {
     if (!messageText.trim() || !currentUser) return;
-
-    const textToSend = messageText.trim();
-    setMessageText(''); // Vider le champ immédiatement pour une meilleure UX
 
     try {
       const chatRef = Firestore().collection('chats').doc(chatId);
       
-      // Utiliser une transaction pour éviter les conflits
-      await Firestore().runTransaction(async (transaction) => {
-        const chatDoc = await transaction.get(chatRef);
-        
-        if (!chatDoc.exists) {
-          const participants = [currentUser.uid, recipientId].sort();
-          transaction.set(chatRef, {
-            participants,
-            participantNames: {
-              [participants[0]]: participants[0] === currentUser.uid 
-                ? (currentUser.displayName || 'User') 
-                : recipientName,
-              [participants[1]]: participants[1] === currentUser.uid 
-                ? (currentUser.displayName || 'User') 
-                : recipientName
-            },
-            createdAt: Firestore.FieldValue.serverTimestamp(),
-            updatedAt: Firestore.FieldValue.serverTimestamp(),
-            lastMessage: textToSend,
-            lastMessageSender: currentUser.uid
-          });
-        }
-
-        const messageRef = chatRef.collection('messages').doc();
-        transaction.set(messageRef, {
-          text: textToSend,
-          senderId: currentUser.uid,
+      const chatDoc = await chatRef.get();
+      if (!chatDoc.exists) {
+        const participants = [currentUser.uid, recipientId].sort();
+        await chatRef.set({
+          participants,
+          participantNames: {
+            [participants[0]]: participants[0] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName,
+            [participants[1]]: participants[1] === currentUser.uid 
+              ? (currentUser.displayName || 'User') 
+              : recipientName
+          },
           createdAt: Firestore.FieldValue.serverTimestamp(),
-          isRead: false,
-          readBy: [currentUser.uid],
-          messageType: 'text'
+          updatedAt: Firestore.FieldValue.serverTimestamp(),
+          lastMessage: messageText,
+          lastMessageSender: currentUser.uid
         });
+      }
 
-        transaction.update(chatRef, {
-          lastMessage: textToSend,
-          lastMessageSender: currentUser.uid,
-          updatedAt: Firestore.FieldValue.serverTimestamp()
-        });
+      await chatRef.collection('messages').add({
+        text: messageText,
+        senderId: currentUser.uid,
+        createdAt: Firestore.FieldValue.serverTimestamp(),
+        isRead: false,
+        readBy: [currentUser.uid],
+        messageType: 'text'
       });
 
+      await chatRef.update({
+        lastMessage: messageText,
+        lastMessageSender: currentUser.uid,
+        updatedAt: Firestore.FieldValue.serverTimestamp()
+      });
+
+      setMessageText('');
     } catch (error) {
       console.error("Send message error:", error);
       Alert.alert("Erreur", "Impossible d'envoyer le message");
-      setMessageText(textToSend); // Restaurer le texte en cas d'erreur
     }
-  }, [messageText, currentUser, chatId, recipientId, recipientName]);
+  };
 
-  // Fonction de formatage de date mémorisée
-  const formatDate = useCallback((firebaseDate) => {
+  const formatDate = (firebaseDate) => {
     if (!firebaseDate || !firebaseDate.toDate) return '';
     const d = firebaseDate.toDate();
     return d.toLocaleDateString("fr-FR", {
@@ -338,12 +316,13 @@ const Chat2p = ({ route, navigation }) => {
       month: "short",
       year: "numeric",
     });
-  }, []);
+  };
 
   // Fonction pour afficher les détails d'une note partagée
-  const showSharedNoteDetails = useCallback((sharedNote) => {
+  const showSharedNoteDetails = (sharedNote) => {
     if (!sharedNote) return;
 
+    // 1. Affiche d'abord l'alerte rapide
     Alert.alert(
       sharedNote.title,
       `${sharedNote.description}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
@@ -351,6 +330,7 @@ const Chat2p = ({ route, navigation }) => {
         { 
           text: "Voir détails", 
           onPress: () => {
+            // 2. Navigation vers l'écran détaillé quand l'utilisateur clique
             navigation.navigate('AfficherNotes', { 
               note: {
                 id: sharedNote.id,
@@ -360,6 +340,7 @@ const Chat2p = ({ route, navigation }) => {
                 createdAt: sharedNote.createdAt,
                 visibility: sharedNote.visibility,
                 image: sharedNote.image || null,
+                // Ajoutez d'autres champs si nécessaire
               }
             });
           } 
@@ -368,10 +349,10 @@ const Chat2p = ({ route, navigation }) => {
       ],
       { cancelable: true }
     );
-  }, [navigation, formatDate]);
+  };
 
-  // Composant de message optimisé avec React.memo
-  const MessageItem = React.memo(({ item }) => {
+  // Message rendu avec style "WhatsApp-like" incluant les notes partagées
+  const renderMessage = ({ item }) => {
     const isCurrentUser = item.senderId === currentUser?.uid;
     const messageDate = item.createdAt?.toDate() || new Date();
     const isSharedNote = item.messageType === 'shared_note';
@@ -430,24 +411,10 @@ const Chat2p = ({ route, navigation }) => {
         </TouchableOpacity>
       </View>
     );
-  });
+  };
 
-  // Fonction de rendu de message optimisée
-  const renderMessage = useCallback(({ item }) => (
-    <MessageItem item={item} />
-  ), []);
-
-  // Fonction keyExtractor optimisée
-  const keyExtractor = useCallback((item) => item.id, []);
-
-  // Fonction pour ouvrir le modal des notes
-  const openNotesModal = useCallback(() => {
-    fetchUserNotes();
-    setShowNotesModal(true);
-  }, [fetchUserNotes]);
-
-  // Modal des notes optimisé
-  const NotesModal = React.memo(() => (
+  // Modal pour sélectionner une note à partager
+  const NotesModal = () => (
     <Modal
       visible={showNotesModal}
       animationType="slide"
@@ -511,7 +478,7 @@ const Chat2p = ({ route, navigation }) => {
         </View>
       </View>
     </Modal>
-  ));
+  );
 
   return (
     <KeyboardAvoidingView
@@ -530,24 +497,19 @@ const Chat2p = ({ route, navigation }) => {
         ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
-        keyExtractor={keyExtractor}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messagesList}
         onContentSizeChange={scrollToBottom}
         onLayout={scrollToBottom}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={10}
-        windowSize={10}
-        getItemLayout={(data, index) => ({
-          length: 80,
-          offset: 80 * index,
-          index,
-        })}
       />
 
       <View style={styles.inputContainer}>
         <TouchableOpacity 
           style={styles.shareButton}
-          onPress={openNotesModal}
+          onPress={() => {
+            fetchUserNotes();
+            setShowNotesModal(true);
+          }}
         >
           <Icon name="document-text" size={20} color="#1E90FF" />
         </TouchableOpacity>
@@ -558,8 +520,6 @@ const Chat2p = ({ route, navigation }) => {
           onChangeText={setMessageText}
           placeholder="Écrivez un message..."
           multiline
-          onSubmitEditing={sendMessage}
-          blurOnSubmit={false}
         />
         
         <TouchableOpacity 
@@ -738,6 +698,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
+  // Styles pour le modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
