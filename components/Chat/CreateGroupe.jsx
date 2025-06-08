@@ -32,10 +32,28 @@ const CreateGroup = ({ navigation }) => {
             const friendId = data.users.find(uid => uid !== currentUser.uid);
             const userDoc = await Firestore().collection('users').doc(friendId).get();
             if (userDoc.exists) {
+              const userData = userDoc.data();
+              // Vérification améliorée de l'avatar comme dans ChatList
+              let avatarUrl = null;
+              if (userData?.photoURL) {
+                avatarUrl = userData.photoURL;
+              } else if (userData?.photoProfil) {
+                if (userData.photoProfil.startsWith('data:image')) {
+                  avatarUrl = userData.photoProfil;
+                } else if (userData.photoProfil.startsWith('/9j/')) {
+                  avatarUrl = `data:image/jpeg;base64,${userData.photoProfil}`;
+                } else {
+                  avatarUrl = userData.photoProfil;
+                }
+              } else if (userData?.avatar) {
+                avatarUrl = userData.avatar;
+              }
+
               return {
                 id: friendId,
-                name: userDoc.data().nom || userDoc.data().displayName || 'Ami',
-                avatar: userDoc.data().photoURL || null,
+                name: userData.nom || userData.displayName || 'Ami',
+                avatar: avatarUrl,
+                isOnline: userData.isOnline || false
               };
             }
             return null;
@@ -67,7 +85,6 @@ const CreateGroup = ({ navigation }) => {
     }
 
     try {
-      // Créer le groupe
       const groupRef = await Firestore()
         .collection('groups')
         .add({
@@ -79,7 +96,6 @@ const CreateGroup = ({ navigation }) => {
           lastMessageSender: ""
         });
 
-      // Ajouter le groupe à chaque membre
       const batch = Firestore().batch();
       [currentUser.uid, ...selectedFriends].forEach(userId => {
         const userRef = Firestore().collection('users').doc(userId);
@@ -107,16 +123,28 @@ const CreateGroup = ({ navigation }) => {
       ]}
       onPress={() => toggleFriendSelection(item.id)}
     >
-      {item.avatar ? (
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
-      ) : (
-        <View style={[styles.avatar, styles.avatarPlaceholder]}>
-          <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
-        </View>
-      )}
+      <View style={styles.avatarContainer}>
+        {item.avatar ? (
+          <Image 
+            source={{ uri: item.avatar }} 
+            style={styles.avatar}
+            onError={(e) => console.log("Erreur de chargement de l'avatar:", e.nativeEvent.error)}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.avatar, styles.avatarPlaceholder]}>
+            <Text style={styles.avatarText}>
+              {item.name.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+        )}
+        {!item.isGroup && (
+          <View style={item.isOnline ? styles.onlineBadge : styles.offlineBadge} />
+        )}
+      </View>
+      
       <Text style={styles.friendName}>{item.name}</Text>
+      
       {selectedFriends.includes(item.id) && (
         <Icon name="checkmark-circle" size={24} color="#1E90FF" />
       )}
@@ -210,11 +238,15 @@ const styles = StyleSheet.create({
   selectedFriend: {
     backgroundColor: '#f0f8ff',
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  avatarContainer: {
+    position: 'relative',
     marginRight: 12,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
   },
   avatarPlaceholder: {
     backgroundColor: '#1E90FF',
@@ -222,13 +254,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: {
-    color: 'white',
-    fontSize: 18,
+    color: '#fff',
+    fontSize: 20,
     fontWeight: 'bold',
+  },
+  onlineBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  offlineBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#9E9E9E',
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   friendName: {
     flex: 1,
     fontSize: 16,
+    fontWeight: '600',
   },
 });
 
