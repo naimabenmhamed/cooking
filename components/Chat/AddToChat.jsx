@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, FlatList, TouchableOpacity, Alert, Image } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import Firestore from '@react-native-firebase/firestore';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +11,26 @@ export default function AddToChat() {
   const [search, setSearch] = useState('');
   const navigation = useNavigation();
   const currentUser = auth().currentUser;
+
+  // Fonction pour gérer les différents formats d'avatar (identique à ChatList)
+  const getAvatarUrl = (userData) => {
+    let avatarUrl = null;
+    if (userData?.photoURL) {
+      avatarUrl = userData.photoURL;
+    } else if (userData?.photoProfil) {
+      // Si photoProfil est une string base64
+      if (userData.photoProfil.startsWith('data:image')) {
+        avatarUrl = userData.photoProfil;
+      } else if (userData.photoProfil.startsWith('/9j/')) {
+        avatarUrl = `data:image/jpeg;base64,${userData.photoProfil}`;
+      } else {
+        avatarUrl = userData.photoProfil;
+      }
+    } else if (userData?.avatar) {
+      avatarUrl = userData.avatar;
+    }
+    return avatarUrl;
+  };
 
   // Fonction pour vérifier et récupérer les amis
   const fetchFriends = async () => {
@@ -29,9 +49,11 @@ export default function AddToChat() {
           try {
             const userDoc = await Firestore().collection('users').doc(friendId).get();
             if (userDoc.exists) {
+              const userData = userDoc.data();
               return {
                 id: friendId,
-                ...userDoc.data()
+                ...userData,
+                avatar: getAvatarUrl(userData) // Ajouter l'avatar traité
               };
             }
           } catch (error) {
@@ -69,7 +91,14 @@ export default function AddToChat() {
 
       const usersData = snapshot.docs
         .filter(doc => doc.id !== currentUser?.uid)
-        .map(doc => ({ id: doc.id, ...doc.data() }));
+        .map(doc => {
+          const userData = doc.data();
+          return {
+            id: doc.id,
+            ...userData,
+            avatar: getAvatarUrl(userData) // Ajouter l'avatar traité
+          };
+        });
 
       setUsers(usersData);
     } catch (error) {
@@ -153,7 +182,8 @@ export default function AddToChat() {
 
       navigation.navigate('Chat2p', {
         recipientId: user.id,
-        recipientName: user.nom
+        recipientName: user.nom,
+        otherUserAvatar: user.avatar // Passer l'avatar à la conversation
       });
 
     } catch (error) {
@@ -169,11 +199,22 @@ export default function AddToChat() {
       style={styles.userItem}
       onPress={() => startChat(item)}
     >
-      <View style={styles.avatarPlaceholder}>
-        <Text style={styles.avatarText}>
-          {item.nom?.charAt(0)?.toUpperCase() || '?'}
-        </Text>
-      </View>
+      {item.avatar ? (
+        <Image 
+          source={{ uri: item.avatar }} 
+          style={styles.avatar}
+          onError={(e) => {
+            console.log("Erreur de chargement de l'avatar:", e.nativeEvent.error);
+          }}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.avatar, styles.avatarPlaceholder]}>
+          <Text style={styles.avatarText}>
+            {item.nom ? item.nom.charAt(0).toUpperCase() : '?'}
+          </Text>
+        </View>
+      )}
       <View style={styles.userInfo}>
         <Text style={styles.userName}>{item.nom}</Text>
         {search.trim() !== '' && (
@@ -248,14 +289,17 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  avatarPlaceholder: {
+  avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
+    marginRight: 12,
+    backgroundColor: '#f0f0f0',
+  },
+  avatarPlaceholder: {
     backgroundColor: '#1E90FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
   },
   avatarText: {
     color: '#fff',
