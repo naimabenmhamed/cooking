@@ -102,9 +102,9 @@ const renderItem = ({ item }) => {
     <TouchableOpacity onPress={() => openNote(item)} style={styles.noteItem}>
       <Text style={styles.userName}>{item.userName || "Utilisateur inconnu"}</Text>
       <Text style={styles.noteTitle}>{item.title}</Text>
-      <Text style={styles.noteContent}>{item.description}</Text>
+      {/* <Text style={styles.noteContent}>{item.description}</Text> */}
       {item.ingredient && (
-        <Text style={styles.noteIngredient}>{item.ingredient}</Text>
+        <Text style={styles.noteIngredient}>{item.leçon}</Text>
       )}
 
       {/* Bouton Like */}
