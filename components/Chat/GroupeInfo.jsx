@@ -46,7 +46,7 @@ const GroupInfo = ({ route, navigation }) => {
             const userData = doc.data();
             return {
               id: doc.id,
-              name: userData.nom || userData.displayName || 'Membre', // Utilise 'nom' ou 'displayName'
+              name: userData.nom || userData.displayName || 'Membre',
               email: userData.email,
               photoURL: userData.photoURL
             };
@@ -96,6 +96,30 @@ const GroupInfo = ({ route, navigation }) => {
     } catch (error) {
       console.error("Error leaving group:", error);
       Alert.alert("Erreur", "Impossible de quitter le groupe");
+    }
+  };
+
+  const deleteGroup = async () => {
+    try {
+      // Supprimer le groupe de la collection groups
+      await Firestore().collection('groups').doc(groupId).delete();
+      
+      // Supprimer le groupe de la liste des groupes de chaque membre
+      const batch = Firestore().batch();
+      members.forEach(member => {
+        const userRef = Firestore().collection('users').doc(member.id);
+        batch.update(userRef, {
+          groups: Firestore.FieldValue.arrayRemove(groupId)
+        });
+      });
+      
+      await batch.commit();
+      
+      navigation.goBack();
+      Alert.alert("Succès", "Le groupe a été supprimé");
+    } catch (error) {
+      console.error("Error deleting group:", error);
+      Alert.alert("Erreur", "Impossible de supprimer le groupe");
     }
   };
 
@@ -184,7 +208,23 @@ const GroupInfo = ({ route, navigation }) => {
         />
       </View>
 
-      {currentUser.uid !== group.createdBy && (
+      {currentUser.uid === group?.createdBy ? (
+        <TouchableOpacity 
+          style={[styles.leaveButton, styles.deleteButton]}
+          onPress={() => {
+            Alert.alert(
+              "Supprimer le groupe",
+              "Êtes-vous sûr de vouloir supprimer définitivement ce groupe? Cette action est irréversible.",
+              [
+                { text: "Annuler", style: "cancel" },
+                { text: "Supprimer", onPress: deleteGroup, style: "destructive" }
+              ]
+            );
+          }}
+        >
+          <Icon name="trash-outline" size={19} color="#999" />
+        </TouchableOpacity>
+      ) : (
         <TouchableOpacity 
           style={styles.leaveButton}
           onPress={() => {
@@ -346,6 +386,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff4444',
     borderRadius: 10,
     alignItems: 'center',
+  },
+  deleteButton: {
+    backgroundColor: '#E0FFFF',
+    padding: 5,
+    borderRadius: 15,
+    alignItems: 'center',
+    marginTop: 5,
+    width: '20%',
   },
   leaveButtonText: {
     color: 'white',

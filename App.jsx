@@ -20,6 +20,7 @@ import AfficherNotes from "./components/Main/AfficherNotes"
 import CreateGroup from "./components/Chat/CreateGroupe";
 import GroupChat from "./components/Chat/GroupeChat";
 import GroupInfo from "./components/Chat/GroupeInfo";
+import AddMember from "./components/Chat/AddMembre";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -115,8 +116,9 @@ export default function App() {
          <Stack.Screen name="Notes" component={ToNotes} options={{ headerShown: false }} />
          <Stack.Screen name="AfficherNotes" component={AfficherNotes} options={{ headerShown: false }} />
            <Stack.Screen name="CreateGroup" component={CreateGroup} options={{ title: 'Créer un groupe' }} />
-           <Stack.Screen name="GroupChat" component={GroupChat} options={{ title: 'Créer un groupe' }} />
-           <Stack.Screen name="GroupInfo" component={GroupInfo} options={{ title: 'Créer un groupe' }} />
+           <Stack.Screen name="GroupChat" component={GroupChat} options={{ title: 'Créer un groupe' ,headerShown: false}} />
+           <Stack.Screen name="GroupInfo" component={GroupInfo} options={{ title: 'Créer un groupe' ,headerShown: false}} />
+           <Stack.Screen name="AddMember" component={AddMember}options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />

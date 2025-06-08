@@ -7,8 +7,7 @@ import {
   StyleSheet, 
   Image,
   StatusBar,
-  Platform,
-  Alert
+  Platform
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import auth from '@react-native-firebase/auth';
@@ -23,24 +22,19 @@ const ChatList = () => {
   const [groups, setGroups] = useState([]);
   const [conversations, setConversations] = useState([]);
 
-  // Fonction utilitaire pour obtenir le timestamp
   const getTimestamp = (timestamp) => {
     if (!timestamp) return 0;
     
     try {
-      // Si c'est un Timestamp Firestore
       if (timestamp && typeof timestamp.toMillis === 'function') {
         return timestamp.toMillis();
       }
-      // Si c'est un objet Date
       if (timestamp instanceof Date) {
         return timestamp.getTime();
       }
-      // Si c'est déjà un nombre
       if (typeof timestamp === 'number') {
         return timestamp;
       }
-      // Si c'est un objet avec seconds et nanoseconds
       if (timestamp && timestamp.seconds) {
         return timestamp.seconds * 1000 + (timestamp.nanoseconds || 0) / 1000000;
       }
@@ -51,17 +45,14 @@ const ChatList = () => {
     }
   };
 
-  // Combiner et trier les conversations par dernière activité
   const combinedList = [...groups, ...friends, ...conversations]
     .filter((item, index, self) => 
       index === self.findIndex(t => t.id === item.id)
     )
     .sort((a, b) => {
-      // Priorité aux conversations avec messages non lus
       if (a.hasUnreadMessages && !b.hasUnreadMessages) return -1;
       if (!a.hasUnreadMessages && b.hasUnreadMessages) return 1;
       
-      // Ensuite, trier par timestamp du dernier message
       const aTime = a.lastMessageTime || 0;
       const bTime = b.lastMessageTime || 0;
       return bTime - aTime;
@@ -74,7 +65,6 @@ const ChatList = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    // Écouter les conversations individuelles
     const unsubscribeConversations = firestore()
       .collection('conversations')
       .where('participants', 'array-contains', currentUser.uid)
@@ -88,27 +78,41 @@ const ChatList = () => {
                 
                 if (!otherUserId) return null;
 
-                // Récupérer les infos de l'autre utilisateur
                 const userDoc = await firestore().collection('users').doc(otherUserId).get();
                 
-                // Compter les messages non lus
                 const messages = data.messages || [];
                 const unreadCount = messages.filter(msg => 
                   msg.senderId !== currentUser.uid && 
                   (!msg.readBy || !msg.readBy.includes(currentUser.uid))
                 ).length;
 
-                // Obtenir le dernier message
                 const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
                 const lastMessageTime = lastMessage ? getTimestamp(lastMessage.timestamp) : 0;
 
                 if (userDoc.exists) {
                   const userData = userDoc.data();
+                  // Vérification améliorée de l'avatar
+                  let avatarUrl = null;
+                  if (userData?.photoURL) {
+                    avatarUrl = userData.photoURL;
+                  } else if (userData?.photoProfil) {
+                    // Si photoProfil est une string base64
+                    if (userData.photoProfil.startsWith('data:image')) {
+                      avatarUrl = userData.photoProfil;
+                    } else if (userData.photoProfil.startsWith('/9j/')) {
+                      avatarUrl = `data:image/jpeg;base64,${userData.photoProfil}`;
+                    } else {
+                      avatarUrl = userData.photoProfil;
+                    }
+                  } else if (userData?.avatar) {
+                    avatarUrl = userData.avatar;
+                  }
+
                   return {
                     id: otherUserId,
                     conversationId: doc.id,
                     name: userData?.nom || userData?.displayName || 'Ami',
-                    avatar: userData?.photoURL || null,
+                    avatar: avatarUrl,
                     isOnline: userData?.isOnline || false,
                     isGroup: false,
                     hasUnreadMessages: unreadCount > 0,
@@ -131,7 +135,6 @@ const ChatList = () => {
         }
       });
 
-    // Écouter les amis (pour ceux qui n'ont pas encore de conversation)
     const unsubscribeFriends = firestore()
       .collection('friends')
       .where('users', 'array-contains', currentUser.uid)
@@ -148,10 +151,26 @@ const ChatList = () => {
                 const userDoc = await firestore().collection('users').doc(friendId).get();
                 if (userDoc.exists) {
                   const userData = userDoc.data();
+                  // Même vérification améliorée pour les amis
+                  let avatarUrl = null;
+                  if (userData?.photoURL) {
+                    avatarUrl = userData.photoURL;
+                  } else if (userData?.photoProfil) {
+                    if (userData.photoProfil.startsWith('data:image')) {
+                      avatarUrl = userData.photoProfil;
+                    } else if (userData.photoProfil.startsWith('/9j/')) {
+                      avatarUrl = `data:image/jpeg;base64,${userData.photoProfil}`;
+                    } else {
+                      avatarUrl = userData.photoProfil;
+                    }
+                  } else if (userData?.avatar) {
+                    avatarUrl = userData.avatar;
+                  }
+
                   return {
                     id: friendId,
                     name: userData?.nom || userData?.displayName || 'Ami',
-                    avatar: userData?.photoURL || null,
+                    avatar: avatarUrl,
                     isOnline: userData?.isOnline || false,
                     isGroup: false,
                     hasUnreadMessages: false,
@@ -175,7 +194,6 @@ const ChatList = () => {
         }
       });
 
-    // Écouter les groupes
     const unsubscribeGroups = firestore()
       .collection('groups')
       .where('members', 'array-contains', currentUser.uid)
@@ -186,14 +204,12 @@ const ChatList = () => {
               try {
                 const data = doc.data();
                 
-                // Compter les messages non lus dans le groupe
                 const messages = data.messages || [];
                 const unreadCount = messages.filter(msg => 
                   msg.senderId !== currentUser.uid && 
                   (!msg.readBy || !msg.readBy.includes(currentUser.uid))
                 ).length;
 
-                // Obtenir le dernier message
                 const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
                 const lastMessageTime = lastMessage ? getTimestamp(lastMessage.timestamp) : 0;
 
@@ -243,7 +259,6 @@ const ChatList = () => {
       const now = new Date();
       const messageDate = new Date(timestamp);
       
-      // Vérifier si la date est valide
       if (isNaN(messageDate.getTime())) return '';
       
       const diffInMinutes = (now - messageDate) / (1000 * 60);
@@ -289,7 +304,15 @@ const ChatList = () => {
     >
       <View style={styles.avatarContainer}>
         {item.avatar ? (
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          <Image 
+            source={{ uri: item.avatar }} 
+            style={styles.avatar}
+            onError={(e) => {
+              console.log("Erreur de chargement de l'avatar:", e.nativeEvent.error);
+              // Vous pourriez ici mettre à jour l'état pour afficher l'avatar par défaut
+            }}
+            resizeMode="cover"
+          />
         ) : (
           <View style={[styles.avatar, styles.avatarPlaceholder]}>
             <Text style={styles.avatarText}>
@@ -446,6 +469,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
+    backgroundColor: '#f0f0f0',
   },
   avatarPlaceholder: {
     backgroundColor: '#1E90FF',
