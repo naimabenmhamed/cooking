@@ -336,8 +336,8 @@ const Chat2p = ({ route , navigation }) => {
               note: {
                 id: sharedNote.id,
                 title: sharedNote.title,
-                leçon: sharedNote.leçon,
-                ingredient: sharedNote.ingredient || '',
+                leçon: sharedNote.leçon || '',
+                // ingredient: sharedNote.ingredient || '',
                 createdAt: sharedNote.createdAt,
                 visibility: sharedNote.visibility,
                 image: sharedNote.image || null,
