@@ -61,7 +61,7 @@ export default function AfficherNotes ({route,navigation}){
     {/* Afficher le bouton "Publier" seulement si l'utilisateur est le propriétaire et la note n'est pas publique */}
     {isOwner && note.visibility !== 'public' && (
       <TouchableOpacity style={styles.button} onPress={handlePublish}>
-        <Text style={styles.buttonText}>Publier la recette</Text>
+        <Text style={styles.buttonText}>Publier la leçon</Text>
       </TouchableOpacity>
     )}
       
