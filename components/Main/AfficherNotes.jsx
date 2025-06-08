@@ -3,6 +3,7 @@ import firestore from '@react-native-firebase/firestore'
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Platform, PermissionsAndroid, Alert, Keyboard,Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Add from './Add';
+import  Resumer from'./resumer';
 export default function AfficherNotes ({route,navigation}){
 
   const { note } = route.params;
@@ -39,6 +40,38 @@ const handleDeleteText = async (id) => {
       console.error(error);
 
     }
+    const handleSummarize = async () => {
+    const texte = note.description;
+
+  if (!texte) {
+    Alert.alert("Erreur", "Aucun texte à résumer.");
+    return;
+  }
+
+  try {
+    const response = await fetch('http://<TON_SERVEUR>:8000/resumer', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ texte }),
+    });
+
+    const data = await response.json();
+
+    if (data.resume) {
+      navigation.navigate('ResumeResult', { resumeText: data.resume });
+    } else {
+      Alert.alert("Erreur", "Résumé non trouvé.");
+    }
+
+  } catch (error) {
+    console.error("Erreur FastAPI :", error);
+    Alert.alert("Erreur", "Problème de connexion au serveur.");
+  }
+};
+
+
 
   };
 
@@ -103,6 +136,7 @@ const handleDeleteText = async (id) => {
       </TouchableOpacity>
 
          <TouchableOpacity
+               onPress={() => navigation.navigate('Resumer')}
       
       style={styles.button}
       >

@@ -33,6 +33,8 @@ def chat(message: Message):
     elif user_input == 22:
         return{"response":"none"}  
     elif user_input == 33:  
-        return{"response":"chercher a des amis a l'aide de leur nome et le contacter "}    
+        return{"response":"chercher a des amis a l'aide de leur nome et le contacter "}  
+    else :
+        return{"response":"ce choix n'exicte pas"}  
 
 

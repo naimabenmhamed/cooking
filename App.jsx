@@ -18,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import ToNotes from "./components/Main/Notes";
 import AfficherNotes from "./components/Main/AfficherNotes";
 import Chatboot from './components/Main/chatboot';
+import Resumer from './components/Main/resumer';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -114,6 +115,7 @@ export default function App() {
          <Stack.Screen name="Notes" component={ToNotes} options={{ headerShown: false }} />
          <Stack.Screen name="AfficherNotes" component={AfficherNotes} options={{ headerShown: false }} />
           <Stack.Screen name="Chatboot" component={Chatboot} options={{ headerShown: false }} />
+          <Stack.Screen name="Resumer" component={Resumer} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />
