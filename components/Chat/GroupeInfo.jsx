@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -18,44 +18,72 @@ const GroupInfo = ({ route, navigation }) => {
   const [group, setGroup] = useState(null);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false); // Nouvel état pour tracker la suppression
   const currentUser = auth().currentUser;
+  const unsubscribeRef = useRef(null); // Référence pour le listener
 
   useEffect(() => {
+    if (!groupId) {
+      Alert.alert("Erreur", "ID de groupe manquant");
+      navigation.goBack();
+      return;
+    }
+
     const fetchGroupData = async () => {
       try {
         const groupDoc = await Firestore().collection('groups').doc(groupId).get();
         
-        if (!groupDoc.exists) {
+        if (!groupDoc || !groupDoc.exists) {
           Alert.alert("Erreur", "Ce groupe n'existe pas");
           navigation.goBack();
           return;
         }
 
         const groupData = groupDoc.data();
-        setGroup(groupData);
+        if (!groupData) {
+          Alert.alert("Erreur", "Données du groupe introuvables");
+          navigation.goBack();
+          return;
+        }
+
+        setGroup({
+          ...groupData,
+          id: groupDoc.id
+        });
 
         // Récupération des membres avec leurs vrais noms
-        const memberPromises = groupData.members.map(memberId => 
-          Firestore().collection('users').doc(memberId).get()
-        );
+        if (groupData.members && Array.isArray(groupData.members)) {
+          const memberPromises = groupData.members.map(memberId => 
+            Firestore().collection('users').doc(memberId).get()
+          );
 
-        const memberSnapshots = await Promise.all(memberPromises);
-        const membersData = memberSnapshots
-          .filter(doc => doc.exists)
-          .map(doc => {
-            const userData = doc.data();
-            return {
-              id: doc.id,
-              name: userData.nom || userData.displayName || 'Membre',
-              email: userData.email,
-              photoURL: userData.photoURL
-            };
-          });
+          const memberSnapshots = await Promise.all(memberPromises);
+          const membersData = memberSnapshots
+            .filter(doc => doc && doc.exists)
+            .map(doc => {
+              const userData = doc.data();
+              return {
+                id: doc.id,
+                name: userData?.nom || userData?.displayName || 'Membre',
+                email: userData?.email || '',
+                photoURL: userData?.photoURL || userData?.avatar || null
+              };
+            });
 
-        setMembers(membersData);
+          setMembers(membersData);
+        }
       } catch (error) {
         console.error("Error fetching group data:", error);
-        Alert.alert("Erreur", "Impossible de charger les informations du groupe");
+        let errorMessage = "Impossible de charger les informations du groupe";
+        
+        if (error.code === 'permission-denied') {
+          errorMessage = "Permissions insuffisantes pour accéder à ce groupe";
+        } else if (error.code === 'not-found') {
+          errorMessage = "Ce groupe n'existe pas";
+        }
+        
+        Alert.alert("Erreur", errorMessage);
+        navigation.goBack();
       } finally {
         setLoading(false);
       }
@@ -63,17 +91,64 @@ const GroupInfo = ({ route, navigation }) => {
 
     fetchGroupData();
 
-    const unsubscribe = Firestore()
-      .collection('groups')
-      .doc(groupId)
-      .onSnapshot(doc => {
-        if (doc.exists) {
-          setGroup(doc.data());
-        }
-      });
+    // Set up real-time listener avec nettoyage amélioré
+    const setupListener = () => {
+      const unsubscribe = Firestore()
+        .collection('groups')
+        .doc(groupId)
+        .onSnapshot(
+          (doc) => {
+            // Ignorer les mises à jour si on est en train de supprimer
+            if (isDeleting) return;
+            
+            if (doc && doc.exists) {
+              const data = doc.data();
+              if (data) {
+                setGroup({
+                  ...data,
+                  id: doc.id
+                });
+              }
+            } else {
+              // Le document n'existe plus (supprimé)
+              console.log("Group document no longer exists");
+              // Nettoyer le listener
+              if (unsubscribeRef.current) {
+                unsubscribeRef.current();
+                unsubscribeRef.current = null;
+              }
+            }
+          },
+          (error) => {
+            // Ignorer les erreurs si on est en train de supprimer ou si le composant est démonté
+            if (isDeleting) return;
+            
+            console.error("Group listener error:", error);
+            if (error.code === 'permission-denied') {
+              console.log("Permission denied for group listener - cleaning up");
+              // Nettoyer le listener en cas d'erreur de permission
+              if (unsubscribeRef.current) {
+                unsubscribeRef.current();
+                unsubscribeRef.current = null;
+              }
+            }
+          }
+        );
+      
+      unsubscribeRef.current = unsubscribe;
+      return unsubscribe;
+    };
 
-    return () => unsubscribe();
-  }, [groupId, navigation]);
+    const unsubscribe = setupListener();
+
+    // Cleanup function
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+    };
+  }, [groupId, navigation, isDeleting]);
 
   const leaveGroup = async () => {
     try {
@@ -95,31 +170,82 @@ const GroupInfo = ({ route, navigation }) => {
       Alert.alert("Succès", "Vous avez quitté le groupe");
     } catch (error) {
       console.error("Error leaving group:", error);
-      Alert.alert("Erreur", "Impossible de quitter le groupe");
+      let errorMessage = "Impossible de quitter le groupe";
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = "Permissions insuffisantes pour quitter le groupe";
+      }
+      
+      Alert.alert("Erreur", errorMessage);
     }
   };
 
   const deleteGroup = async () => {
     try {
-      // Supprimer le groupe de la collection groups
+      // Marquer qu'on est en train de supprimer
+      setIsDeleting(true);
+      
+      // Nettoyer le listener avant la suppression
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+
+      // 1. Vérifiez d'abord que l'utilisateur est bien le créateur
+      const groupDoc = await Firestore().collection('groups').doc(groupId).get();
+      
+      if (!groupDoc || !groupDoc.exists) {
+        Alert.alert("Erreur", "Ce groupe n'existe pas");
+        return;
+      }
+
+      const groupData = groupDoc.data();
+      if (!groupData) {
+        Alert.alert("Erreur", "Données du groupe introuvables");
+        return;
+      }
+
+      if (groupData.createdBy !== currentUser.uid) {
+        Alert.alert("Erreur", "Seul le créateur peut supprimer le groupe");
+        return;
+      }
+
+      // 2. Supprimer le groupe
       await Firestore().collection('groups').doc(groupId).delete();
       
-      // Supprimer le groupe de la liste des groupes de chaque membre
-      const batch = Firestore().batch();
-      members.forEach(member => {
-        const userRef = Firestore().collection('users').doc(member.id);
-        batch.update(userRef, {
-          groups: Firestore.FieldValue.arrayRemove(groupId)
-        });
-      });
-      
-      await batch.commit();
-      
+      // 3. Nettoyer la référence dans le profil utilisateur
+      try {
+        await Firestore()
+          .collection('users')
+          .doc(currentUser.uid)
+          .update({
+            groups: Firestore.FieldValue.arrayRemove(groupId)
+          });
+      } catch (error) {
+        console.log("Erreur lors de la mise à jour du profil (non critique):", error);
+      }
+
+      // 4. Navigation immédiate
       navigation.goBack();
-      Alert.alert("Succès", "Le groupe a été supprimé");
+      
+      // 5. Alerte après navigation
+      setTimeout(() => {
+        Alert.alert("Succès", "Groupe supprimé avec succès");
+      }, 100);
+      
     } catch (error) {
       console.error("Error deleting group:", error);
-      Alert.alert("Erreur", "Impossible de supprimer le groupe");
+      let errorMessage = "Impossible de supprimer le groupe";
+      
+      if (error.code === 'permission-denied') {
+        errorMessage = "Permissions insuffisantes pour supprimer le groupe";
+      } else if (error.code === 'not-found') {
+        errorMessage = "Ce groupe n'existe plus";
+      }
+      
+      Alert.alert("Erreur", errorMessage);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -130,17 +256,21 @@ const GroupInfo = ({ route, navigation }) => {
   const renderMember = ({ item }) => (
     <TouchableOpacity style={styles.memberItem}>
       {item.photoURL ? (
-        <Image source={{ uri: item.photoURL }} style={styles.avatar} />
+        <Image 
+          source={{ uri: item.photoURL }} 
+          style={styles.avatar}
+          onError={() => console.log("Erreur de chargement de l'avatar")}
+        />
       ) : (
         <View style={[styles.avatar, styles.avatarPlaceholder]}>
           <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
+            {item.name?.charAt(0)?.toUpperCase() || '?'}
           </Text>
         </View>
       )}
       <View style={styles.memberInfo}>
         <Text style={styles.memberName}>{item.name}</Text>
-        <Text style={styles.memberEmail}>{item.email}</Text>
+        {item.email && <Text style={styles.memberEmail}>{item.email}</Text>}
       </View>
       {item.id === group?.createdBy && (
         <View style={styles.adminBadge}>
@@ -151,7 +281,7 @@ const GroupInfo = ({ route, navigation }) => {
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (loading || !group) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#1E90FF" />
@@ -171,23 +301,27 @@ const GroupInfo = ({ route, navigation }) => {
       </View>
 
       <View style={styles.groupInfo}>
-        {group.avatar ? (
-          <Image source={{ uri: group.avatar }} style={styles.groupAvatar} />
+        {group?.avatar ? (
+          <Image 
+            source={{ uri: group.avatar }} 
+            style={styles.groupAvatar}
+            onError={() => console.log("Erreur de chargement de l'avatar du groupe")}
+          />
         ) : (
           <View style={[styles.groupAvatar, styles.groupAvatarPlaceholder]}>
             <Text style={styles.groupAvatarText}>
-              {group.name.charAt(0).toUpperCase()}
+              {group?.name?.charAt(0)?.toUpperCase() || 'G'}
             </Text>
           </View>
         )}
-        <Text style={styles.groupName}>{group.name}</Text>
+        <Text style={styles.groupName}>{group?.name || 'Groupe sans nom'}</Text>
         <Text style={styles.memberCount}>{members.length} membre{members.length !== 1 ? 's' : ''}</Text>
       </View>
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Membres du groupe</Text>
-          {group.createdBy === currentUser.uid && (
+          {group?.createdBy === currentUser.uid && (
             <TouchableOpacity onPress={handleAddMember}>
               <Icon name="person-add" size={24} color="#1E90FF" />
             </TouchableOpacity>
@@ -221,6 +355,7 @@ const GroupInfo = ({ route, navigation }) => {
               ]
             );
           }}
+          disabled={isDeleting}
         >
           <Icon name="trash-outline" size={19} color="#999" />
         </TouchableOpacity>
@@ -238,8 +373,7 @@ const GroupInfo = ({ route, navigation }) => {
             );
           }}
         >
-          <Icon name="log-out-outline" size={19} color="#999" />
-          
+           <Icon name="log-out-outline" size={19} color="#999" />
         </TouchableOpacity>
       )}
     </View>

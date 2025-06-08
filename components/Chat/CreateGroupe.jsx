@@ -73,47 +73,69 @@ const CreateGroup = ({ navigation }) => {
     );
   };
 
-  const createGroup = async () => {
-    if (!groupName.trim()) {
-      Alert.alert("Erreur", "Veuillez donner un nom au groupe");
-      return;
-    }
+const createGroup = async () => {
+  if (!groupName.trim()) {
+    Alert.alert("Erreur", "Veuillez donner un nom au groupe");
+    return;
+  }
 
-    if (selectedFriends.length === 0) {
-      Alert.alert("Erreur", "Veuillez sélectionner au moins un ami");
-      return;
-    }
+  if (selectedFriends.length === 0) {
+    Alert.alert("Erreur", "Veuillez sélectionner au moins un ami");
+    return;
+  }
 
-    try {
-      const groupRef = await Firestore()
-        .collection('groups')
-        .add({
-          name: groupName.trim(),
-          members: [currentUser.uid, ...selectedFriends],
-          createdBy: currentUser.uid,
-          createdAt: Firestore.FieldValue.serverTimestamp(),
-          lastMessage: "",
-          lastMessageSender: ""
-        });
+  try {
+    // 1. Créer le groupe d'abord
+    const groupData = {
+      name: groupName.trim(),
+      members: [currentUser.uid, ...selectedFriends],
+      createdBy: currentUser.uid,
+      createdAt: Firestore.FieldValue.serverTimestamp(),
+      lastMessage: "",
+      lastMessageSender: ""
+    };
 
-      const batch = Firestore().batch();
-      [currentUser.uid, ...selectedFriends].forEach(userId => {
-        const userRef = Firestore().collection('users').doc(userId);
-        batch.update(userRef, {
-          groups: Firestore.FieldValue.arrayUnion(groupRef.id)
-        });
-      });
-      await batch.commit();
+    const groupRef = await Firestore()
+      .collection('groups')
+      .add(groupData);
 
+    console.log('Groupe créé avec ID:', groupRef.id);
+
+    // 2. Mettre à jour seulement le profil de l'utilisateur actuel
+    // Les autres utilisateurs mettront à jour leur profil quand ils rejoindront le groupe
+    const currentUserRef = Firestore().collection('users').doc(currentUser.uid);
+    await currentUserRef.update({
+      groups: Firestore.FieldValue.arrayUnion(groupRef.id)
+    });
+    console.log('Profil utilisateur mis à jour');
+
+    // 3. Navigation vers le chat de groupe
+    // Utiliser setTimeout pour s'assurer que tout est bien committé
+    setTimeout(() => {
       navigation.navigate('GroupChat', {
         groupId: groupRef.id,
-        groupName: groupName.trim()
+        groupName: groupName.trim(),
+        members: [currentUser.uid, ...selectedFriends]
       });
-    } catch (error) {
-      console.error("Error creating group:", error);
-      Alert.alert("Erreur", "Impossible de créer le groupe");
+    }, 100);
+
+  } catch (error) {
+    console.error("Erreur détaillée lors de la création du groupe:", error);
+    
+    // Afficher une erreur plus spécifique selon le type d'erreur
+    let errorMessage = "Impossible de créer le groupe";
+    
+    if (error.code === 'permission-denied') {
+      errorMessage = "Permissions insuffisantes pour créer le groupe";
+    } else if (error.code === 'network-error') {
+      errorMessage = "Erreur de connexion. Vérifiez votre réseau";
+    } else if (error.message) {
+      errorMessage = `Erreur: ${error.message}`;
     }
-  };
+    
+    Alert.alert("Erreur", errorMessage);
+  }
+};
 
   const renderFriend = ({ item }) => (
     <TouchableOpacity 
