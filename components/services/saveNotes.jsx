@@ -6,12 +6,12 @@ import { launchImageLibrary } from 'react-native-image-picker';
 
 export const saveNotes= (route, navigation) => {
     const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
+    const [leçon, setLeçon] = useState('');
     const [loading, setLoading] = useState(false);
     const [idToUpdate, setIdToUpdate] = useState(null);
     const [initialTitle, setInitialTitle] = useState('');
-    const [initialDescription, setInitialDescription] = useState('');
-    const [ingredient, setIngredient] = useState('');
+    const [initialLeçon, setInitialLeçon] = useState('');
+    // const [ingredient, setIngredient] = useState('');
     const [initialIngredient, setInitialIngredient] = useState('');
     const [visibility, setVisibility] = useState('private'); // par défaut privée
     const [imageBase64, setImageBase64] = useState(null);
@@ -21,8 +21,8 @@ export const saveNotes= (route, navigation) => {
    return () => {
      setIdToUpdate(null);
      setTitle('');
-     setDescription('');
-     setIngredient('');
+     setLeçon('');
+    //  setIngredient('');
      setImageBase64(null);
 
    };
@@ -33,16 +33,16 @@ export const saveNotes= (route, navigation) => {
        // Mode édition - charger les données existantes
        setIdToUpdate(route.params.id);
        setTitle(route.params.title || '');
-       setDescription(route.params.description || '');
-       setIngredient(route.params.ingredient || '');
+       setLeçon(route.params.description || '');
+      //  setIngredient(route.params.ingredient || '');
      } else {
        // Mode création - réinitialiser
        setIdToUpdate(null);
        setTitle('');
-       setDescription('');
+       setLeçon('');
         setInitialTitle('');
-     setInitialDescription('');
-     setIngredient('');
+     setInitialLeçon('');
+    //  setIngredient('');
      setImageBase64(null);
 
      }
@@ -60,7 +60,7 @@ export const saveNotes= (route, navigation) => {
        Alert.alert('Erreur', 'Le titre est obligatoire');
        return;
      }
-     if (idToUpdate && title.trim() === initialTitle.trim() && description.trim() === initialDescription.trim() && ingredient.trim() === initialIngredient.trim()) {
+     if (idToUpdate && title.trim() === initialTitle.trim() && leçon.trim() === initialLeçon.trim() ) {
      Alert.alert('تنبيه', 'لم يتم أي تعديل'); // Pas de modifications
      navigation.goBack(); // Retourner sans modifier
      return;
@@ -87,8 +87,8 @@ export const saveNotes= (route, navigation) => {
            .doc(idToUpdate)
            .update({
              title,
-             description,
-             ingredient,
+             leçon,
+            //  ingredient,
               visibility,
                visibility: visibility,
               image: imageBase64,
@@ -102,8 +102,8 @@ export const saveNotes= (route, navigation) => {
            .collection('notes')
            .add({
              title,
-             description,
-             ingredient ,
+             leçon,
+            //  ingredient ,
              userId: currentUser.uid,
              userName,
              visibility: visibility || 'private',
@@ -117,8 +117,8 @@ export const saveNotes= (route, navigation) => {
           // Réinitialisation complète
      setIdToUpdate(null);
      setTitle('');
-     setDescription('');
-     setIngredient('');
+     setLeçon('');
+    //  setIngredient('');
      Keyboard.dismiss();
      setImageBase64(null);
 
@@ -174,17 +174,17 @@ const selectImage = async () => {
     idToUpdate,
     title,
     setTitle,
-    description,
-    setDescription,
+    leçon,
+    setLeçon,
     setIdToUpdate,
     initialTitle,
     setInitialTitle,
-    initialDescription,
-    setInitialDescription,
+    initialLeçon,
+    setInitialLeçon,
     handleAddOrUpdate,
     loading,
-    ingredient,
-    setIngredient,
+    // ingredient,
+    // setIngredient,
     visibility,            // <= ajoute ceci
     setVisibility ,
     imageBase64,

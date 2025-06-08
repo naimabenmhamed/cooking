@@ -20,17 +20,17 @@ export default function Add({ navigation, route }) {
     idToUpdate,
     title,
     setTitle,
-    description,
-    setDescription,
+    leçon,
+    setLeçon,
     setIdToUpdate,
     initialTitle,
     setInitialTitle,
-    initialDescription,
-    setInitialDescription,
+    initialLeçon,
+    setInitialLeçon,
     handleAddOrUpdate,
     loading,
-    ingredient,
-    setIngredient,
+    // ingredient,
+    // setIngredient,
     imageBase64,
     setImageBase64,
     selectImage,  visibility,            // <= ajoute ceci
@@ -92,9 +92,9 @@ export default function Add({ navigation, route }) {
 const handleCancelEdit = () => {
   setIdToUpdate(null);
   setTitle('');
-  setDescription('');
+  setLeçon('');
   setInitialTitle('');
-  setInitialDescription('');
+  setInitialLeçon('');
   navigation.goBack(); // ou navigation.navigate('ToNotes') si vous voulez rediriger
 };
 
@@ -175,8 +175,8 @@ const handleCancelEdit = () => {
           </View>
           <TextInput
             style={[styles.input, styles.textArea]}
-            value={ingredient}
-            onChangeText={setIngredient}
+            value={leçon}
+            onChangeText={setLeçon}
             placeholder="Entrer le Leçon"
              placeholderTextColor="#999" 
             multiline
@@ -248,7 +248,7 @@ const handleCancelEdit = () => {
             </Text>
           </TouchableOpacity>
 
-{ (idToUpdate || title.trim() !== '' || ingredient.trim() !== '' || description.trim() !== '') && (
+{ (idToUpdate || title.trim() !== '' || leçon.trim() !== '') && (
         <TouchableOpacity 
           style={[styles.button, styles.cancelButton]} 
           onPress={handleCancelEdit}
