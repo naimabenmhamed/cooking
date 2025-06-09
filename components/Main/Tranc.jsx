@@ -1,29 +1,40 @@
 import axios from 'axios';
-import { Platform } from 'react-native';
 
-// Function to send the audio file for transcription
-const uploadAudio = async (audioPath) => {
+export const uploadAudio = async (audioPath) => {
   const formData = new FormData();
-  
+
+  let cleanUri = audioPath;
+  if (audioPath.startsWith('file://')) {
+    cleanUri = audioPath.replace('file://', '');
+  }
+
+  const fileExtension = cleanUri.split('.').pop();
+  const fileType = fileExtension === 'mp3' ? 'audio/mp3' : `audio/${fileExtension}`;
+
   formData.append('file', {
-    uri: Platform.OS === 'android' ? 'file://' + audioPath : audioPath,
-    type: 'audio/m4a', // or 'audio/mp3' depending on your format
-    name: 'recording.m4a',
+    uri: `file://${cleanUri}`,
+    type: fileType,
+    name: `recording.${fileExtension}`,
   });
 
   try {
-    const response = await axios.post('http://192.168.0.137:8000', formData, {
+    const response = await axios.post('http://10.4.208.93:8000', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
+        Accept: 'application/json',
       },
+      timeout: 30000,
     });
 
-    console.log('Transcribed text:', response.data.transcription);
+    console.log('✅ Transcription response:', response.data);
     return response.data.transcription;
   } catch (error) {
-    console.error('Upload error:', error.message);
+    console.error('❌ Upload error details:', error.message);
+    if (error.response) {
+      console.error('🔁 Server responded with:', error.response.status, error.response.data);
+    } else if (error.request) {
+      console.error('⚠️ No response received:', error.request);
+    }
     return null;
   }
 };
-
-export { uploadAudio };

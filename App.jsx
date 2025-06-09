@@ -13,6 +13,14 @@ import Chat from "./components/Chat/Chat";
 import ChatListe from "./components/Chat/ChatListe";
 import AddToChat from "./components/Chat/AddToChat";
 import Recorde from "./components/Main/Recorde";
+import Chat2p from "./components/Chat/Chat2p";
+import Toast from 'react-native-toast-message';
+import ToNotes from "./components/Main/Notes";
+import AfficherNotes from "./components/Main/AfficherNotes"
+import CreateGroup from "./components/Chat/CreateGroupe";
+import GroupChat from "./components/Chat/GroupeChat";
+import GroupInfo from "./components/Chat/GroupeInfo";
+import AddMember from "./components/Chat/AddMembre";
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -45,9 +53,9 @@ switch (route.name){
       },
       
       tabBarActiveTintColor: '#000',
-        tabBarInactiveTintColor: '#888',
+        tabBarInactiveTintColor: '#555',
         tabBarStyle: {
-          backgroundColor: '#FBD38D',
+          backgroundColor: '#1E90FF',
           height: 60,
           borderTopLeftRadius: 10,
          
@@ -81,11 +89,12 @@ export default function App() {
   if (initializing) return null;
 
   return (
+    <>
     <NavigationContainer>
       <Stack.Navigator
         initialRouteName={user ? "Home" : "CreatAccont"}
         screenOptions={{
-          headerStyle: { backgroundColor: '#E1B055' },
+          headerStyle: { backgroundColor: '#1E90FF' },
           headerTintColor: '#fff',
           headerTitleStyle: { fontWeight: 'bold' },
         }}
@@ -101,9 +110,18 @@ export default function App() {
         <Stack.Screen name="Explore" component={Explore} options={{ headerShown: false }} />
         <Stack.Screen name="Chat" component={Chat} options={{ headerShown: false }} />
         <Stack.Screen name="ChatListe" component={ChatListe} options={{ headerShown: false }} />
-        <Stack.Screen name="AddToChat" component={AddToChat} options={{ headerShown: false }} />
+        <Stack.Screen name="AddToChat" component={AddToChat}  />
          <Stack.Screen name="Recorde" component={Recorde} options={{ headerShown: false }} />
+         <Stack.Screen name="Chat2p" component={Chat2p} options={{ headerShown: false }} />
+         <Stack.Screen name="Notes" component={ToNotes} options={{ headerShown: false }} />
+         <Stack.Screen name="AfficherNotes" component={AfficherNotes} options={{ headerShown: false }} />
+           <Stack.Screen name="CreateGroup" component={CreateGroup} options={{ title: 'Créer un groupe' ,headerShown: false}} />
+           <Stack.Screen name="GroupChat" component={GroupChat} options={{ title: 'Créer un groupe' ,headerShown: false}} />
+           <Stack.Screen name="GroupInfo" component={GroupInfo} options={{ title: 'Créer un groupe' ,headerShown: false}} />
+           <Stack.Screen name="AddMember" component={AddMember}options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
+    <Toast />
+    </>
   );
 }

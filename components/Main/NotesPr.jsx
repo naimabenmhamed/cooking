@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import React,{useState,useEffect} from 'react'
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AfficherNotes from './AfficherNotes'
-export default function ToNotes() {
+export default function  NotesPr() {
   const [texts, setTexts] = useState([]);
   const isFocused = useIsFocused();
   const navigation = useNavigation();
@@ -26,7 +26,7 @@ export default function ToNotes() {
           const userTexts = querySnapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id
-          })).filter(note => note.visibility === 'private').sort((a, b) => b.createdAt - a.createdAt);
+          })).filter(note => note.visibility === 'public').sort((a, b) => b.createdAt - a.createdAt);
           setTexts(userTexts);
         } catch (error) {
           console.error("Erreur lors de la récupération :", error);
@@ -71,6 +71,10 @@ export default function ToNotes() {
           >
             <View style={styles.noteView}>
               <Text style={styles.noteTitle} numberOfLines={1}>{item.title}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Icon name="heart-outline" size={16} color="red" />
+                          <Text style={{ marginLeft: 4 }}>{item.likes?.length || 0}</Text>
+              </View>
               {/* <Text style={styles.noteText} numberOfLines={2}>{item.description}</Text> */}
               <Text style={styles.noteDate}>{formatDate(item.createdAt)}</Text>
               <TouchableOpacity

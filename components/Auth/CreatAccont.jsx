@@ -4,23 +4,39 @@ import { SafeAreaView, View, StyleSheet, TextInput, TouchableOpacity, Text,Alert
 import Login from './Login';
 import auth from '@react-native-firebase/auth';
 import Home from '../Main/Home';
+import firestore from '@react-native-firebase/firestore';
 
 export default function CreatAccount({navigation}) {
   const[email,setEmail]= useState('');
   const[password,setPassword]= useState('');
+const [nom, setNom] = useState('');
 
   const handleSignup = async () => {
     if (password.length < 6) {
-      Alert.alert('خطأ', 'يجب أن تتكون كلمة المرور من 6 أحرف على الأقل');
+      Alert.alert('Erreur', 'Le mot de passe doit comporter au moins 6 caractères');
       return;
     }
     try {
-      await auth().createUserWithEmailAndPassword(email, password);
-      Alert.alert('Succès', 'Compte créé avec succès');
-      navigation.navigate('Home');
-    } catch (error) {
-      Alert.alert('Erreur', error.message);
-    }
+  const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+  Alert.alert('Succès', 'Compte créé avec succès');
+  navigation.navigate('Home');
+
+  const userId = userCredential.user.uid;
+
+  await firestore()
+    .collection('users')
+    .doc(userId)
+    .set({
+      nom: nom, // attention : "nom" n'est pas défini non plus dans ton code actuel !
+      email: email,
+      createdAt: firestore.FieldValue.serverTimestamp()
+    });
+
+  console.log('✅ Utilisateur enregistré avec succès !');
+} catch (error) {
+  Alert.alert('Erreur', error.message);
+}
+
   };
 
   return (
@@ -28,7 +44,7 @@ export default function CreatAccount({navigation}) {
       {/* Zone blanche supérieure */}
       <View style={styles.topSection}>
         <LottieView 
-          source={require('../../assets/animations/Animation - 1745940456888.json')}
+          source={require('../../assets/animations/Animation - 1748192301295.json')}
           autoPlay
           loop
           style={{ width: 280, height: 280 }}
@@ -39,7 +55,15 @@ export default function CreatAccount({navigation}) {
       {/* Zone orange inférieure */}
       <View style={styles.bottomSection}>
         <TextInput
-          placeholder="البريد الإلكتروني"
+  placeholder="Nom"
+  placeholderTextColor="#999"
+  style={styles.input}
+  value={nom}
+  onChangeText={setNom}
+/>
+
+        <TextInput
+          placeholder="E-mail"
           placeholderTextColor="#999"
           style={styles.input}
           keyboardType="email-address"
@@ -48,7 +72,7 @@ export default function CreatAccount({navigation}) {
         />
         
         <TextInput
-          placeholder="كلمة المرور"
+          placeholder="Mot de passe"
           placeholderTextColor="#999"
           style={styles.input}
           secureTextEntry
@@ -58,14 +82,14 @@ export default function CreatAccount({navigation}) {
         />
         
         <TouchableOpacity style={styles.roundButton} onPress={handleSignup}  >
-          <Text style={styles.buttonText}>تسجيل</Text>
+          <Text style={styles.buttonText}>inscription</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={styles.orangeButton}
           onPress={() => navigation.navigate('Login')}
         >
-          <Text style={styles.buttonText}>تسجيل الدخول</Text>
+          <Text style={styles.buttonText}>Connexion</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -87,7 +111,7 @@ export default function CreatAccount({navigation}) {
       alignItems: 'center',
     },
     bottomSection: {
-      backgroundColor: '#E1B055', // Couleur dorée/jaune
+      backgroundColor: '#1E90FF', 
       borderTopLeftRadius: 30,
       borderTopRightRadius: 30,
       padding: 20,
@@ -96,7 +120,7 @@ export default function CreatAccount({navigation}) {
       height: '65%',
     },
     rectangleButton: {
-      backgroundColor: '#FFF5F0', // Teinte très légèrement rosée pour les boutons blancs
+      backgroundColor: '#B0C4DE', // Teinte très légèrement rosée pour les boutons blancs
       borderRadius: 15,
       padding: 15,
       marginVertical: 8,
@@ -128,7 +152,7 @@ export default function CreatAccount({navigation}) {
       height: 50,
     },
     orangeButton: {
-      backgroundColor: '#FF5722', // Couleur orange
+      backgroundColor: '#B0C4DE', // Couleur orange
       borderRadius: 25,
       padding: 15,
       marginVertical: 8,
