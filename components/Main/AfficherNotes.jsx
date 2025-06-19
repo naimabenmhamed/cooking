@@ -56,7 +56,7 @@ export default function AfficherNotes ({route,navigation}){
     <Text style={styles.text}>{note.title}</Text>
 
     <Text style={styles.label}>Leçon</Text>
-    <Text style={styles.text}>{note.leçon || 'Aucun Leçon'}</Text>
+    <Text style={styles.text}>{note.lecon || note.leçon || 'Aucun Leçon'}</Text>
 
     {/* Afficher le bouton "Publier" seulement si l'utilisateur est le propriétaire et la note n'est pas publique */}
     {isOwner && note.visibility !== 'public' && (

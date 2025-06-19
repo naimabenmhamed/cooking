@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef , useCallback, useMemo} from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -16,13 +16,14 @@ import Firestore from '@react-native-firebase/firestore';
 import auth from '@react-native-firebase/auth';
 import Icon from 'react-native-vector-icons/Ionicons';
 
-const Chat2p = ({ route , navigation }) => {
+const Chat2p = ({ route, navigation }) => {
   const { recipientId, recipientName } = route.params;
   const [messages, setMessages] = useState([]);
   const [messageText, setMessageText] = useState('');
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [userNotes, setUserNotes] = useState([]);
   const [isSharing, setIsSharing] = useState(false);
+  const [isRecipientOnline, setIsRecipientOnline] = useState(false);
   const currentUser = auth().currentUser;
   const flatListRef = useRef(null);
 
@@ -33,7 +34,6 @@ const Chat2p = ({ route , navigation }) => {
 
   const chatId = getChatId();
 
-  // Fonction pour faire défiler vers le bas de manière sûre
   const scrollToBottom = () => {
     if (flatListRef.current) {
       setTimeout(() => {
@@ -46,7 +46,6 @@ const Chat2p = ({ route , navigation }) => {
     }
   };
 
-  // Fonction pour récupérer les notes de l'utilisateur
   const fetchUserNotes = async () => {
     try {
       const querySnapshot = await Firestore()
@@ -62,10 +61,10 @@ const Chat2p = ({ route , navigation }) => {
       setUserNotes(notes);
     } catch (error) {
       console.error("Erreur lors de la récupération des notes:", error);
+      Alert.alert("Erreur", "Impossible de charger les notes");
     }
   };
 
-  // Fonction pour partager une note - VERSION CORRIGÉE
   const shareNote = useCallback(async (note) => {
     if (isSharing) return;
     setIsSharing(true);
@@ -73,7 +72,7 @@ const Chat2p = ({ route , navigation }) => {
     try {
       const chatRef = Firestore().collection('chats').doc(chatId);
       
-      // Vérifier si le chat existe en une seule fois
+      // Vérifier si le chat existe
       const chatDoc = await chatRef.get();
       if (!chatDoc.exists) {
         const participants = [currentUser.uid, recipientId].sort();
@@ -96,49 +95,43 @@ const Chat2p = ({ route , navigation }) => {
 
       // Préparer les données de la note partagée
       const sharedNoteData = {
-        id: note.id || '',
+        id: note.id,
         title: note.title || 'Sans titre',
-        Leçon: note.leçon, 
-        // || note.leçon || '',
+        Leçon: note.leçon,
         visibility: note.visibility || 'private',
         sharedBy: currentUser.uid,
         sharedByName: currentUser.displayName || 'Utilisateur',
         createdAt: note.createdAt || Firestore.FieldValue.serverTimestamp()
       };
 
-      // Utiliser une transaction pour éviter les conflits
-      await Firestore().runTransaction(async (transaction) => {
-        // Ajouter le message
-        const messageRef = chatRef.collection('messages').doc();
-        transaction.set(messageRef, {
-          text: `📝 Note partagée: ${note.title || 'Sans titre'}`,
+      // Ajouter le message
+      const messageRef = chatRef.collection('messages').doc();
+      await Firestore().batch()
+        .set(messageRef, {
+          text: `📝 Note partagée: ${note.title}`,
           senderId: currentUser.uid,
           createdAt: Firestore.FieldValue.serverTimestamp(),
           isRead: false,
           readBy: [currentUser.uid],
           messageType: 'shared_note',
           sharedNote: sharedNoteData
-        });
-
-        // Mettre à jour le chat
-        transaction.update(chatRef, {
-          lastMessage: `📝 Note partagée: ${note.title || 'Sans titre'}`,
+        })
+        .update(chatRef, {
+          lastMessage: `📝 Note partagée: ${note.title}`,
           lastMessageSender: currentUser.uid,
           updatedAt: Firestore.FieldValue.serverTimestamp()
-        });
-      });
+        })
+        .commit();
 
       setShowNotesModal(false);
       Alert.alert("Succès", "Note partagée avec succès!");
-      
     } catch (error) {
       console.error("Erreur lors du partage:", error);
       Alert.alert("Erreur", "Impossible de partager la note");
     } finally {
       setIsSharing(false);
     }
-  }, [isSharing, chatId, currentUser.uid, currentUser.displayName, recipientId, recipientName]);
-
+  }, [isSharing, chatId, currentUser, recipientId, recipientName]);
 
   const initializeChat = async () => {
     try {
@@ -147,7 +140,6 @@ const Chat2p = ({ route , navigation }) => {
 
       if (!chatDoc.exists) {
         const participants = [currentUser.uid, recipientId].sort();
-
         await chatRef.set({
           participants,
           participantNames: {
@@ -166,7 +158,11 @@ const Chat2p = ({ route , navigation }) => {
       }
     } catch (error) {
       console.error("Chat initialization error:", error);
-      Alert.alert("Error", "Could not initialize chat");
+      if (error.code === 'permission-denied') {
+        Alert.alert("Permission Error", "You don't have permission to create this chat");
+      } else {
+        Alert.alert("Error", "Could not initialize chat");
+      }
     }
   };
 
@@ -183,13 +179,11 @@ const Chat2p = ({ route , navigation }) => {
 
       if (!snapshot.empty) {
         const batch = Firestore().batch();
-
         snapshot.forEach((doc) => {
           batch.update(doc.ref, {
             readBy: Firestore.FieldValue.arrayUnion(currentUser.uid)
           });
         });
-
         await batch.commit();
       }
     } catch (error) {
@@ -227,19 +221,15 @@ const Chat2p = ({ route , navigation }) => {
       );
   };
 
-  const [isRecipientOnline, setIsRecipientOnline] = useState(false);
-
   useEffect(() => {
     const unsubscribe = Firestore()
       .collection('users')
       .doc(recipientId)
       .onSnapshot((doc) => {
         if (doc.exists) {
-          const data = doc.data();
-          setIsRecipientOnline(data.isOnline || false);
+          setIsRecipientOnline(doc.data().isOnline || false);
         }
       });
-
     return () => unsubscribe();
   }, [recipientId]);
 
@@ -254,6 +244,8 @@ const Chat2p = ({ route , navigation }) => {
     let unsubscribe;
     init().then((unsub) => {
       unsubscribe = unsub;
+    }).catch(error => {
+      console.error("Initialization error:", error);
     });
 
     return () => {
@@ -310,61 +302,50 @@ const Chat2p = ({ route , navigation }) => {
   };
 
   const formatDate = (firebaseDate) => {
-    if (!firebaseDate || !firebaseDate.toDate) return '';
-    const d = firebaseDate.toDate();
-    return d.toLocaleDateString("fr-FR", {
+    if (!firebaseDate?.toDate) return '';
+    return firebaseDate.toDate().toLocaleDateString("fr-FR", {
       day: "numeric",
       month: "short",
       year: "numeric",
     });
   };
 
-  // Fonction pour afficher les détails d'une note partagée
   const showSharedNoteDetails = (sharedNote) => {
     if (!sharedNote) return;
 
-    // 1. Affiche d'abord l'alerte rapide
     Alert.alert(
       sharedNote.title,
-      `${sharedNote.leçon}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
+      `${sharedNote.Leçon}\n\nPartagée par: ${sharedNote.sharedByName}\nDate de création: ${formatDate(sharedNote.createdAt)}`,
       [
         { 
           text: "Voir détails", 
           onPress: () => {
-            // 2. Navigation vers l'écran détaillé quand l'utilisateur clique
             navigation.navigate('AfficherNotes', { 
               note: {
                 id: sharedNote.id,
                 title: sharedNote.title,
-                leçon: sharedNote.leçon || '',
-                // ingredient: sharedNote.ingredient || '',
+                leçon: sharedNote.Leçon,
                 createdAt: sharedNote.createdAt,
-                visibility: sharedNote.visibility,
-                image: sharedNote.image || null,
-                // Ajoutez d'autres champs si nécessaire
+                visibility: sharedNote.visibility
               }
             });
           } 
         },
         { text: "Fermer", style: "cancel" }
-      ],
-      { cancelable: true }
+      ]
     );
   };
 
-  // Message rendu avec style "WhatsApp-like" incluant les notes partagées
   const renderMessage = ({ item }) => {
     const isCurrentUser = item.senderId === currentUser?.uid;
     const messageDate = item.createdAt?.toDate() || new Date();
     const isSharedNote = item.messageType === 'shared_note';
 
     return (
-      <View
-        style={[
-          styles.messageWrapper,
-          isCurrentUser ? styles.messageRight : styles.messageLeft
-        ]}
-      >
+      <View style={[
+        styles.messageWrapper,
+        isCurrentUser ? styles.messageRight : styles.messageLeft
+      ]}>
         <TouchableOpacity
           style={[
             styles.bubble,
@@ -385,9 +366,9 @@ const Chat2p = ({ route , navigation }) => {
             {item.text}
           </Text>
           
-          {isSharedNote && (
+          {isSharedNote && item.sharedNote?.Leçon && (
             <Text style={styles.sharedNoteDescription} numberOfLines={2}>
-              {item.sharedNote.description}
+              {item.sharedNote.Leçon}
             </Text>
           )}
           
@@ -414,7 +395,6 @@ const Chat2p = ({ route , navigation }) => {
     );
   };
 
-  // Modal pour sélectionner une note à partager
   const NotesModal = () => (
     <Modal
       visible={showNotesModal}
@@ -435,17 +415,12 @@ const Chat2p = ({ route , navigation }) => {
             {userNotes.map((note) => (
               <TouchableOpacity
                 key={note.id}
-                style={[
-                  styles.noteItem,
-                  isSharing && { opacity: 0.5 }
-                ]}
+                style={[styles.noteItem, isSharing && { opacity: 0.5 }]}
                 onPress={() => shareNote(note)}
                 disabled={isSharing}
               >
                 <View style={styles.noteContent}>
-                  <Text style={styles.noteTitle} numberOfLines={1}>
-                    {note.title}
-                  </Text>
+                  <Text style={styles.noteTitle}>{note.title}</Text>
                   <Text style={styles.noteDescription} numberOfLines={2}>
                     {note.leçon}
                   </Text>
@@ -483,7 +458,7 @@ const Chat2p = ({ route , navigation }) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'android' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
       keyboardVerticalOffset={90}
     >
@@ -699,7 +674,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
   },
-  // Styles pour le modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
