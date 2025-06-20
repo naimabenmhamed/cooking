@@ -65,75 +65,83 @@ const ChatList = () => {
   useEffect(() => {
     if (!currentUser) return;
 
-    const unsubscribeConversations = firestore()
-      .collection('conversations')
-      .where('participants', 'array-contains', currentUser.uid)
-      .onSnapshot(async (snapshot) => {
-        try {
-          const conversationsData = await Promise.all(
-            snapshot.docs.map(async (doc) => {
-              try {
-                const data = doc.data();
-                const otherUserId = data.participants?.find(uid => uid !== currentUser.uid);
-                
-                if (!otherUserId) return null;
+   const unsubscribeConversations = firestore()
+  .collection('conversations')
+  .where('participants', 'array-contains', currentUser.uid)
+  .onSnapshot(async (snapshot) => {
+    try {
+      const conversationsData = await Promise.all(
+        snapshot.docs.map(async (doc) => {
+          try {
+            const data = doc.data();
+            if (!Array.isArray(data.participants) || data.participants.length < 2) {
+  console.log('Participants invalides ou manquants pour:', doc.id, data.participants);
+  return null;
+}
 
-                const userDoc = await firestore().collection('users').doc(otherUserId).get();
-                
-                const messages = data.messages || [];
-                const unreadCount = messages.filter(msg => 
-                  msg.senderId !== currentUser.uid && 
-                  (!msg.readBy || !msg.readBy.includes(currentUser.uid))
-                ).length;
+const otherUserId = data.participants.find(uid => uid !== currentUser.uid);
+if (!otherUserId) {
+  console.log('Aucun autre utilisateur trouvé dans la conversation:', doc.id, data.participants);
+  return null;
+}
 
-                const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-                const lastMessageTime = lastMessage ? getTimestamp(lastMessage.timestamp) : 0;
+            const userDoc = await firestore().collection('users').doc(otherUserId).get();
 
-                if (userDoc.exists) {
-                  const userData = userDoc.data();
-                  // Vérification améliorée de l'avatar
-                  let avatarUrl = null;
-                  if (userData?.photoURL) {
-                    avatarUrl = userData.photoURL;
-                  } else if (userData?.photoProfil) {
-                    // Si photoProfil est une string base64
-                    if (userData.photoProfil.startsWith('data:image')) {
-                      avatarUrl = userData.photoProfil;
-                    } else if (userData.photoProfil.startsWith('/9j/')) {
-                      avatarUrl = `data:image/jpeg;base64,${userData.photoProfil}`;
-                    } else {
-                      avatarUrl = userData.photoProfil;
-                    }
-                  } else if (userData?.avatar) {
-                    avatarUrl = userData.avatar;
-                  }
+            const lastMessage = {
+              text: data.lastMessage || '',
+              senderId: data.lastMessageSender || '',
+              timestamp: data.lastMessageTime || null,
+            };
+            const lastMessageTime = getTimestamp(lastMessage.timestamp);
+            const unreadCount = 0; // Tu peux adapter si tu veux suivre les readBy
 
-                  return {
-                    id: otherUserId,
-                    conversationId: doc.id,
-                    name: userData?.nom || userData?.displayName || 'Ami',
-                    avatar: avatarUrl,
-                    isOnline: userData?.isOnline || false,
-                    isGroup: false,
-                    hasUnreadMessages: unreadCount > 0,
-                    unreadCount: unreadCount,
-                    lastMessage: lastMessage?.text || '',
-                    lastMessageTime: lastMessageTime,
-                    lastMessageSender: lastMessage?.senderId
-                  };
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              let avatarUrl = null;
+              if (userData?.photoURL) {
+                avatarUrl = userData.photoURL;
+              } else if (userData?.photoProfil) {
+                if (userData.photoProfil.startsWith('data:image')) {
+                  avatarUrl = userData.photoProfil;
+                } else if (userData.photoProfil.startsWith('/9j/')) {
+                  avatarUrl = `data:image/jpeg;base64,${userData.photoProfil}`;
+                } else {
+                  avatarUrl = userData.photoProfil;
                 }
-                return null;
-              } catch (error) {
-                console.log('Erreur lors du traitement d\'une conversation:', error);
-                return null;
+              } else if (userData?.avatar) {
+                avatarUrl = userData.avatar;
               }
-            })
-          );
-          setConversations(conversationsData.filter(c => c !== null));
-        } catch (error) {
-          console.log('Erreur lors de la récupération des conversations:', error);
-        }
-      });
+
+              return {
+                id: otherUserId,
+                conversationId: doc.id,
+                name: userData?.nom || userData?.displayName || 'Ami',
+                avatar: avatarUrl,
+                isOnline: userData?.isOnline === true,
+                isGroup: false,
+                hasUnreadMessages: unreadCount > 0,
+                unreadCount: unreadCount,
+                lastMessage: lastMessage?.text || '',
+                lastMessageTime: lastMessageTime,
+                lastMessageSender: lastMessage?.senderId
+              };
+            }
+
+            return null;
+          } catch (error) {
+            console.log('Erreur lors du traitement d\'une conversation:', error);
+            return null;
+          }
+        })
+      );
+
+      // CETTE LIGNE ÉTAIT MANQUANTE !
+      setConversations(conversationsData.filter(c => c !== null));
+      
+    } catch (error) {
+      console.log('Erreur lors de la récupération des conversations:', error);
+    }
+  });
 
     const unsubscribeFriends = firestore()
       .collection('friends')
@@ -204,14 +212,15 @@ const ChatList = () => {
               try {
                 const data = doc.data();
                 
-                const messages = data.messages || [];
-                const unreadCount = messages.filter(msg => 
-                  msg.senderId !== currentUser.uid && 
-                  (!msg.readBy || !msg.readBy.includes(currentUser.uid))
-                ).length;
+                const lastMessage = {
+  text: data.lastMessage || '',
+  senderId: data.lastMessageSender || '',
+  timestamp: data.lastMessageTime || null,
+};
+const lastMessageTime = getTimestamp(lastMessage.timestamp);
 
-                const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
-                const lastMessageTime = lastMessage ? getTimestamp(lastMessage.timestamp) : 0;
+// Optionnel : si tu veux gérer le nombre de messages non lus, fais-le depuis une autre source
+const unreadCount = 0;
 
                 return {
                   id: doc.id,
@@ -253,7 +262,7 @@ const ChatList = () => {
   };
 
   const formatLastMessageTime = (timestamp) => {
-    if (!timestamp) return '';
+    if (!timestamp|| timestamp === 0) return '';
     
     try {
       const now = new Date();
@@ -348,16 +357,20 @@ const ChatList = () => {
         </View>
         
         <View style={styles.messagePreviewContainer}>
-          <Text style={[
-            styles.friendStatus,
-            item.hasUnreadMessages && styles.unreadMessage
-          ]} numberOfLines={1}>
-            {item.lastMessage ? 
-              (item.lastMessageSender === currentUser.uid ? 'Vous: ' : '') + item.lastMessage :
-              item.isGroup ? 'Groupe' : (item.isOnline ? 'En ligne' : 'Hors ligne')
-            }
-          </Text>
-        </View>
+ <Text style={[
+  styles.friendStatus,
+  item.hasUnreadMessages && styles.unreadMessage
+]} numberOfLines={1}>
+  {item.lastMessage
+    ? (item.lastMessageSender === currentUser.uid
+        ? `Vous: ${item.lastMessage}`
+        : item.isGroup
+          ? item.lastMessage  // Supprimé la référence à participantNames inexistante
+          : item.lastMessage)
+    : ''
+  }
+</Text>
+</View>
       </View>
 
       <View style={styles.rightContainer}>
@@ -547,11 +560,13 @@ const styles = StyleSheet.create({
   messagePreviewContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 20,
   },
   friendStatus: {
     fontSize: 14,
     color: '#666',
     flex: 1,
+    opacity: 1,
   },
   unreadMessage: {
     fontWeight: '600',
