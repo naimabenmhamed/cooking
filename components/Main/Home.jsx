@@ -9,6 +9,7 @@ export default function Home({ navigation }) {
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+const [searchResults, setSearchResults] = useState([]);
 
   const openNote = (note) => {
     navigation.navigate('AfficherNotes', { note, fromHome: true });
@@ -63,7 +64,19 @@ useEffect(() => {
 
   return () => unsubscribe();
 }, []);
-
+// Fonction de recherche améliorée
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSearchResults(notes);
+    } else {
+      const results = notes.filter(note => 
+        note.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.leçon?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        note.userName?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setSearchResults(results);
+    }
+  }, [searchQuery, notes]);
   const renderItem = ({ item }) => {
     const currentUser = auth().currentUser;
     const hasLiked = item.likes?.includes(currentUser?.uid);
@@ -169,13 +182,17 @@ useEffect(() => {
 
   return (
     <View style={styles.container}>
-      <TextInput
-        placeholder="Trouver le titre de la note"
-        placeholderTextColor="#999"
-        style={styles.input}
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      <View style={styles.searchContainer}>
+        <Icon name="search-outline" size={20} color="#999" style={styles.searchIcon} />
+        <TextInput
+          placeholder="Rechercher note publique disponible"
+          placeholderTextColor="#999"
+          style={styles.input}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          clearButtonMode="while-editing"
+        />
+      </View>
 
       {loading ? (
         <ActivityIndicator size="large" color="#3B82F6" />
@@ -196,7 +213,7 @@ useEffect(() => {
         style={styles.logoutButton}
         onPress={handleLogout}
       >
-        <Text style={styles.logoutText}>تسجيل الخروج</Text>
+        <Text style={styles.logoutText}>Déconnexion</Text>
       </TouchableOpacity>
     </View>
   );
@@ -209,12 +226,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   input: {
-    backgroundColor: '#E0FFFF',
-    borderRadius: 15,
-    padding: 15,
-    marginVertical: 8,
-    borderColor: '#3B82F6',
-    borderWidth: 1,
+    flex: 1,
+    paddingVertical: 15,
     color: '#000',
     fontSize: 14,
   },
@@ -273,6 +286,19 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     color: '#6B7280',
     fontSize: 14,
+  },
+   searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0FFFF',
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    marginVertical: 8,
+    borderColor: '#3B82F6',
+    borderWidth: 1,
+  },
+  searchIcon: {
+    marginRight: 10,
   },
   userInfo: {
   flexDirection: 'row',
