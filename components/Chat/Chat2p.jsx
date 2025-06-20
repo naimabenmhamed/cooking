@@ -29,13 +29,17 @@ const Chat2p = () => {
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [recipientData, setRecipientData] = useState(null);
   const flatListRef = useRef(null);
-  
+  const [selectedNote, setSelectedNote] = useState(null);
+const [showNoteViewModal, setShowNoteViewModal] = useState(false);
   const navigation = useNavigation();
   const route = useRoute();
   const currentUser = auth().currentUser;
   
   const { recipientId, recipientName, otherUserAvatar, conversationId: routeConversationId } = route.params;
-
+const handleViewNote = useCallback((note) => {
+  setSelectedNote(note);
+  setShowNoteViewModal(true);
+}, []);
   // Fonction pour obtenir le timestamp en millisecondes
   const getTimestamp = useCallback((timestamp) => {
     if (!timestamp) return Date.now();
@@ -372,6 +376,7 @@ useEffect(() => {
                   isMyMessage ? styles.myNotePreview : styles.otherNotePreview
                 ]}
                 activeOpacity={0.7}
+                onPress={() => handleViewNote(item.sharedNote)}
               >
                 <Text style={[
                   styles.noteTitle,
@@ -527,7 +532,7 @@ useEffect(() => {
           multiline
           maxLength={1000}
           onSubmitEditing={sendMessage}
-          blurOnSubmit={false}
+          // blurOnSubmit={false}
         />
         <TouchableOpacity 
           style={[
@@ -586,6 +591,49 @@ useEffect(() => {
           )}
         </View>
       </Modal>
+      {/* Modal pour afficher la note complète */}
+<Modal
+  visible={showNoteViewModal}
+  animationType="slide"
+  transparent={false}
+  onRequestClose={() => setShowNoteViewModal(false)}
+>
+  <View style={styles.modalContainer}>
+    <View style={styles.modalHeader}>
+      <Text style={styles.modalTitle}>Note partagée</Text>
+      <TouchableOpacity
+        onPress={() => setShowNoteViewModal(false)}
+        style={styles.modalCloseButton}
+      >
+        <Icon name="close" size={24} color="#333" />
+      </TouchableOpacity>
+    </View>
+    
+    {selectedNote && (
+      <View style={styles.fullNoteContainer}>
+        <Text style={styles.fullNoteTitle}>{selectedNote.title}</Text>
+        
+        {selectedNote.leçon && (
+          <Text style={styles.fullNoteContent}>{selectedNote.leçon}</Text>
+        )}
+        
+        {selectedNote.image && (
+          <Image 
+            source={{ uri: `data:image/jpeg;base64,${selectedNote.image}` }}
+            style={styles.fullNoteImage}
+            resizeMode="contain"
+          />
+        )}
+        
+        <View style={styles.fullNoteFooter}>
+          <Text style={styles.fullNoteAuthor}>
+            Par: {selectedNote.userName}
+          </Text>
+        </View>
+      </View>
+    )}
+  </View>
+</Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -766,6 +814,39 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingHorizontal: 40,
   },
+  fullNoteContainer: {
+  flex: 1,
+  padding: 20,
+},
+fullNoteTitle: {
+  fontSize: 22,
+  fontWeight: 'bold',
+  color: '#333',
+  marginBottom: 20,
+  textAlign: 'center',
+},
+fullNoteContent: {
+  fontSize: 16,
+  color: '#555',
+  lineHeight: 24,
+  marginBottom: 20,
+},
+fullNoteImage: {
+  width: '100%',
+  height: 300,
+  borderRadius: 8,
+  marginBottom: 20,
+},
+fullNoteFooter: {
+  borderTopWidth: 1,
+  borderTopColor: '#eee',
+  paddingTop: 10,
+},
+fullNoteAuthor: {
+  fontSize: 14,
+  color: '#888',
+  fontStyle: 'italic',
+},
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
