@@ -1,27 +1,28 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Form
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from transformers import pipeline
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+import torch
 
 app = FastAPI()
 
-# Autoriser l'accès depuis l'appli React Native
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 🔐 Tu peux mettre l’URL précise en production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Charger le modèle de résumé
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
-
-# Format attendu
-class Texte(BaseModel):
-    texte: str
+# Initialisation du modèle francophone
+model_name = "plguillou/t5-base-fr-sum-cnndm"
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
 
 @app.post("/resumer/")
-def resumer(texte_input: Texte):
-    resultat = summarizer(texte_input.texte, max_length=100, min_length=30, do_sample=False)
-    return {"résumé": resultat[0]['summary_text']}
+async def generate_summary(texte: str = Form(...)):
+    inputs = tokenizer("summarize: " + texte, return_tensors="pt", max_length=1024, truncation=True)
+    summary_ids = model.generate(inputs["input_ids"], max_length=150, min_length=40, length_penalty=2.0, num_beams=4, early_stopping=True)
+    résumé = tokenizer.decode(summary_ids[0], skip_special_tokens=True)
+    return {"résumé": résumé}
+
+

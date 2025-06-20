@@ -21,6 +21,7 @@ import CreateGroup from "./components/Chat/CreateGroupe";
 import GroupChat from "./components/Chat/GroupeChat";
 import GroupInfo from "./components/Chat/GroupeInfo";
 import AddMember from "./components/Chat/AddMembre";
+import Resumer from './components/Main/resumer';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -119,6 +120,7 @@ export default function App() {
            <Stack.Screen name="GroupChat" component={GroupChat} options={{ title: 'Créer un groupe' ,headerShown: false}} />
            <Stack.Screen name="GroupInfo" component={GroupInfo} options={{ title: 'Créer un groupe' ,headerShown: false}} />
            <Stack.Screen name="AddMember" component={AddMember}options={{ headerShown: false }} />
+           <Stack.Screen name="Resumer" component={Resumer} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />
