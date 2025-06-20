@@ -71,7 +71,7 @@ const shareNote = async (note) => {
     const sharedNoteData = {
       id: note.id,
       title: note.title || "Sans titre",
-      description: note.description || "",
+      leçon: note.leçon || "",
       createdAt: note.createdAt || Firestore.FieldValue.serverTimestamp(),
       visibility: note.visibility || "private",
       sharedBy: currentUser.uid,
@@ -240,8 +240,7 @@ const shareNote = async (note) => {
               note: {
                 id: sharedNote.id,
                 title: sharedNote.title,
-                description: sharedNote.description,
-                ingredient: sharedNote.ingredient || '',
+                 leçon: sharedNote.leçon || '',
                 createdAt: sharedNote.createdAt,
                 visibility: sharedNote.visibility,
                 image: sharedNote.image || null,
