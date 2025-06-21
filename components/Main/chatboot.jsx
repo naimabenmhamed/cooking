@@ -1,53 +1,28 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { GiftedChat, Message, Bubble } from 'react-native-gifted-chat';
 import { SafeAreaView, StyleSheet } from 'react-native';
-import axios from 'axios';
 
 export default function App() {
   const [messages, setMessages] = useState([]);
 
+  // Affiche un message au démarrage de l'application
   useEffect(() => {
-    const welcome = {
+    const welcomeMessage = {
       _id: 1,
-      text: '👋 Bienvenue sur votre chatbot !\n\nChoisissez un numéro :\n1️⃣ Info sur l’application\n2️⃣ Bouton accueil\n3️⃣ Ajouter\n4️⃣ Profil',
+      text: '👋 Bienvenue sur votre chatbot !\n\nChoisissez un numéro :\n1️⃣ Info sur l’application\n2️⃣ Accueil\n3️⃣ Ajouter\n4️⃣ Profil',
       createdAt: new Date(),
       user: {
         _id: 2,
         name: 'Bot',
       },
     };
-    setMessages([welcome]);        
+    setMessages([welcomeMessage]);
   }, []);
 
-  const onSend = useCallback(async (newMessages = []) => {
+  const onSend = useCallback((newMessages = []) => {
     setMessages(previousMessages =>
       GiftedChat.append(previousMessages, newMessages)
     );
-
-    const userMessage = newMessages[0].text;
-
-    try {
-      const res = await axios.post('http://192.168.8.110:8000/chat', {
-        message: userMessage,
-      });
-
-      const botMessage = {
-        _id: Math.random().toString(),
-        text: res.data.response,
-        createdAt: new Date(),
-        user: {
-          _id: 2,
-          name: 'Bot',
-        },
-      };
-
-      setMessages(previousMessages =>
-        GiftedChat.append(previousMessages, [botMessage])
-      );
-    } catch (error) {
-      console.error("Erreur API:", error.message);
-    }
   }, []);
 
   return (
@@ -65,18 +40,18 @@ export default function App() {
             {...props}
             wrapperStyle={{
               left: {
-                backgroundColor: '#003366', // bleu foncé pour bot
+                backgroundColor: '#003366',
               },
               right: {
-                backgroundColor: '#99CCFF', // bleu clair pour utilisateur
+                backgroundColor: '#99CCFF',
               },
             }}
             textStyle={{
               left: {
-                color: '#FFFFFF', // texte blanc bot
+                color: '#FFFFFF',
               },
               right: {
-                color: '#000000', // texte noir utilisateur (plus lisible sur bleu clair)
+                color: '#000000',
               },
             }}
           />
@@ -92,3 +67,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F0FE',
   },
 });
+
+

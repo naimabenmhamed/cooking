@@ -21,7 +21,7 @@ def chat(message: Message):
     user_input = message.message
 
     if  user_input == 1:
-        return {"response": "Application de prise de notes vocales avec transcription, résumé, export PDF/ZIP, et chat intégré."}
+        return {"response": "Application de prise de notes vocales avec transcription, résumé, export PDF, et chat intégré."}
     elif user_input == 2:
         return {"response": " Comporte les notes indiquées comme publiques et une barre de recherche pour chercher une note à l’aide de son titre."}
     elif user_input == 3:
