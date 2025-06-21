@@ -4,6 +4,7 @@ import auth from '@react-native-firebase/auth';
 import firestore from '@react-native-firebase/firestore';
 import React, { useEffect, useState } from "react";
 import Icon from 'react-native-vector-icons/Ionicons';
+import Chatboot from './chatboot';
 
 export default function Home({ navigation }) {
   const [notes, setNotes] = useState([]);
@@ -197,6 +198,9 @@ useEffect(() => {
         onPress={handleLogout}
       >
         <Text style={styles.logoutText}>تسجيل الخروج</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={styles.chatButton} onPress={() => navigation.navigate('Chatboot')}>
+        <Icon name="chatbox" size={30} color="#777" />
       </TouchableOpacity>
     </View>
   );

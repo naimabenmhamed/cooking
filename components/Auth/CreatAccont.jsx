@@ -9,11 +9,10 @@ import firestore from '@react-native-firebase/firestore';
 export default function CreatAccount({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nom, setNom] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSignup = async () => {
-    if (!email || !password || !nom) {
+    if (!email || !password) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
@@ -26,19 +25,15 @@ export default function CreatAccount({ navigation }) {
     setIsLoading(true);
 
     try {
-      // Créer le compte utilisateur
       const userCredential = await auth().createUserWithEmailAndPassword(email, password);
       const user = userCredential.user;
 
-      // Envoyer l'email de vérification
       await user.sendEmailVerification();
 
-      // Enregistrer les données utilisateur dans Firestore
       await firestore()
         .collection('users')
         .doc(user.uid)
         .set({
-          nom: nom,
           email: email,
           emailVerified: false,
           createdAt: firestore.FieldValue.serverTimestamp()
@@ -54,8 +49,6 @@ export default function CreatAccount({ navigation }) {
           }
         ]
       );
-
-      console.log('✅ Utilisateur enregistré avec succès !');
 
     } catch (error) {
       console.error('Erreur lors de la création du compte:', error);
@@ -83,7 +76,6 @@ export default function CreatAccount({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Zone blanche supérieure */}
       <View style={styles.topSection}>
         <LottieView 
           source={require('../../assets/animations/Animation - 1748192301295.json')}
@@ -94,16 +86,7 @@ export default function CreatAccount({ navigation }) {
         />
       </View>
       
-      {/* Zone orange inférieure */}
       <View style={styles.bottomSection}>
-        <TextInput
-          placeholder="Nom"
-          placeholderTextColor="#999"
-          style={styles.input}
-          value={nom}
-          onChangeText={setNom}
-        />
-
         <TextInput
           placeholder="E-mail"
           placeholderTextColor="#999"
@@ -164,16 +147,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     justifyContent: 'space-evenly',
     height: '65%',
-  },
-  rectangleButton: {
-    backgroundColor: '#B0C4DE',
-    borderRadius: 15,
-    padding: 15,
-    marginVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-    color: '#000', 
   },
   input: {
     backgroundColor: '#FFF5F0',

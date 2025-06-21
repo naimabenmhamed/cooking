@@ -8,10 +8,11 @@ import Home from '../Main/Home';
 export default function Login({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [nom, setNom] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    if (!email || !password || !nom) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
@@ -19,10 +20,13 @@ export default function Login({ navigation }) {
     setIsLoading(true);
 
     try {
-      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      const cleanedEmail = email.trim().toLowerCase();
+      const userCredential = await auth().signInWithEmailAndPassword(cleanedEmail, password);
       const user = userCredential.user;
 
-      // Vérifier si l'email est vérifié
+      // Recharge l’état de l’utilisateur pour avoir la bonne info emailVerified
+      await user.reload();
+
       if (!user.emailVerified) {
         Alert.alert(
           'Email non vérifié',
@@ -37,6 +41,7 @@ export default function Login({ navigation }) {
               text: 'Renvoyer',
               onPress: async () => {
                 try {
+                  await user.reload();
                   await user.sendEmailVerification();
                   Alert.alert(
                     'Email envoyé',
@@ -59,11 +64,12 @@ export default function Login({ navigation }) {
         return;
       }
 
-      // Mettre à jour le statut de vérification dans Firestore
+      // Mise à jour Firestore
       await firestore()
         .collection('users')
         .doc(user.uid)
         .update({
+          nom: nom,
           emailVerified: true,
           lastLogin: firestore.FieldValue.serverTimestamp()
         });
@@ -74,7 +80,7 @@ export default function Login({ navigation }) {
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
       let errorMessage = 'Une erreur est survenue';
-      
+
       switch (error.code) {
         case 'auth/user-not-found':
           errorMessage = 'Aucun compte trouvé avec cette adresse email';
@@ -94,7 +100,7 @@ export default function Login({ navigation }) {
         default:
           errorMessage = error.message;
       }
-      
+
       Alert.alert('Erreur', errorMessage);
     } finally {
       setIsLoading(false);
@@ -108,7 +114,6 @@ export default function Login({ navigation }) {
     }
 
     try {
-      // Essayer de se connecter temporairement pour accéder à l'utilisateur
       const methods = await auth().fetchSignInMethodsForEmail(email);
       if (methods.length === 0) {
         Alert.alert('Erreur', 'Aucun compte trouvé avec cette adresse email');
@@ -128,7 +133,6 @@ export default function Login({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Zone blanche avec view */}
       <View style={styles.topsection}>
         <LottieView 
           source={require('../../assets/animations/Animation - 1748944760221.json')}  
@@ -139,8 +143,15 @@ export default function Login({ navigation }) {
         />
       </View>
       
-      {/* Zone bleue avec view */}
       <View style={styles.bottomSection}>
+        <TextInput
+          placeholder="Nom"
+          placeholderTextColor="#999"
+          style={styles.input}
+          value={nom}
+          onChangeText={setNom}
+        />
+        
         <TextInput  
           placeholder="E-mail"  
           placeholderTextColor="#999"  
@@ -204,16 +215,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-evenly',
     height: '65%',
   },
-  rectangleButton: {
-    backgroundColor: '#B0C4DE',
-    borderRadius: 15,
-    padding: 15,
-    marginVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-    color: '#000',
-  },
   input: {
     backgroundColor: '#FFF5F0',
     borderRadius: 15,
@@ -229,15 +230,6 @@ const styles = StyleSheet.create({
   },
   roundButton: {
     backgroundColor: '#FFF5F0',
-    borderRadius: 25,
-    padding: 15,
-    marginVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 50,
-  },
-  orangeButton: {
-    backgroundColor: '#B0C4DE',
     borderRadius: 25,
     padding: 15,
     marginVertical: 8,
@@ -264,3 +256,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 });
+
+
+

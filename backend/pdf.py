@@ -3,13 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 import io
+import textwrap
 
 app = FastAPI()
 
-# Middleware CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -17,10 +15,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Enregistrement d'une police lisible avec accents
-p.setFont("Helvetica", 12)
-  # Assure-toi que ce fichier est présent dans le projet
 
 @app.post("/generate-pdf/")
 async def generate_pdf(text: str = Form(...)):
@@ -30,33 +24,37 @@ async def generate_pdf(text: str = Form(...)):
     width, height = A4
     margin_x = 2 * cm
     margin_y = 2 * cm
+    usable_width = width - 2 * margin_x
     y = height - margin_y
 
-    p.setFont("DejaVu", 12)  # Police avec accents + taille correcte
-
-    # Titre
-    p.setFont("DejaVu", 16)
-    p.drawCentredString(width / 2, y, "Contenu de la leçon")
-    p.setFont("DejaVu", 12)
+    # Titre centré
+    p.setFont("Helvetica-Bold", 16)
+    p.setFillColorRGB(0.1, 0.3, 0.6)
+    p.drawCentredString(width / 2, y, "Contenu de la Leçon")
     y -= 2 * cm
 
+    # Texte
+    p.setFont("Helvetica", 12)
+    p.setFillColorRGB(0, 0, 0)
+
+    # Préparation du texte ligne par ligne
+    max_chars_per_line = int(usable_width / 6.5)  # approximatif : 6.5 pts par caractère
+
     for line in text.split('\n'):
-        if y < margin_y:  # Sauter à la page suivante si trop bas
-            p.showPage()
-            p.setFont("DejaVu", 12)
-            y = height - margin_y
+        wrapped_lines = textwrap.wrap(line, width=max_chars_per_line)
+        for subline in wrapped_lines:
+            if y < margin_y:
+                p.showPage()
+                y = height - margin_y
+                p.setFont("Helvetica", 12)
+            p.drawString(margin_x, y, subline)
+            y -= 15
 
-        p.drawString(margin_x, y, line)
-        y -= 18  # espace entre lignes
-
-    p.showPage()
     p.save()
-
     buffer.seek(0)
+
     return Response(
         content=buffer.read(),
         media_type="application/pdf",
         headers={"Content-Disposition": "inline; filename=lecon.pdf"}
     )
-
-
